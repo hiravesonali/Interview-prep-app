@@ -155,6 +155,8 @@ def _question_loop(session: PracticeSession) -> None:
             session.answers[q.id] = answer
             if session.mode == "guided":
                 _evaluate(session, q.id)
+            # Save after every answer so an abandoned session can be resumed from the dashboard.
+            save_session(session, state.settings().data_dir)
             st.rerun()
 
     if answered and session.mode == "guided" and q.id in session.feedback:
@@ -193,12 +195,19 @@ def _guided_help(session: PracticeSession) -> None:
 
         if q.id in session.coaching:
             st.markdown(session.coaching[q.id])
-        elif c2.button("Coach me step by step"):
+            return
+        note = st.text_input(
+            "Tell the coach where you are stuck (optional)",
+            placeholder="e.g. I know token bucket but not how to explain the trade-offs",
+            max_chars=500,
+            key=f"coach_note_{q.id}",
+        )
+        if c2.button("Coach me step by step"):
             slot = st.empty()
             text = ""
             try:
                 for chunk in coach_stream(
-                    state.pipeline(), session.role, q, model=state.current_model()
+                    state.pipeline(), session.role, q, note=note, model=state.current_model()
                 ):
                     text += chunk
                     slot.markdown(text + "▌")
@@ -235,6 +244,7 @@ def _evaluate(session: PracticeSession, qid: int) -> None:
 def _evaluate_all(session: PracticeSession) -> None:
     pending = [qid for qid in session.answers if qid not in session.feedback]
     bar = st.progress(0.0, text="Scoring your answers…")
+    failed: list[str] = []
     for i, qid in enumerate(pending, 1):
         try:
             session.feedback[qid] = evaluate_answer(
@@ -245,10 +255,16 @@ def _evaluate_all(session: PracticeSession) -> None:
                 technique=session.feedback_technique,
                 model=state.current_model(),
             )
-        except (GuardBlocked, StructuredOutputError):
-            continue
+        except GuardBlocked as err:
+            failed.append(
+                f"Q{qid}: blocked by the {err.decision.layer} guard ({err.decision.reason})"
+            )
+        except StructuredOutputError as err:
+            failed.append(f"Q{qid}: feedback failed ({err})")
         bar.progress(i / len(pending), text=f"Scored {i}/{len(pending)}")
     bar.empty()
+    if failed:
+        st.session_state.scoring_errors = failed
 
 
 # ---------- summary ----------
@@ -261,6 +277,8 @@ def _summary(session: PracticeSession) -> None:
         f"{session.mode} mode · {answered}/{session.total} answered · "
         f"started {session.started_at:%d %b %H:%M}"
     )
+    if errors := st.session_state.pop("scoring_errors", None):
+        st.warning("Some answers could not be scored:\n" + "\n".join(f"- {e}" for e in errors))
     if not session.feedback:
         st.info("No answers were scored.")
     else:

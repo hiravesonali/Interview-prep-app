@@ -3,6 +3,7 @@
 Status: APPROVED 2026-11-03. Day 1 (scaffold, client, guard, dashboard), Day 2 (JD analyzer, practice loop, history), UI redesign and Prompt Lab (5 feedback prompt variants, parallel comparison, ratings, leaderboard) delivered.
 Note: guard model changed to Haiku 4.5 because the course API key's OpenRouter guardrail allowlist blocks Haiku 5.5.
 Changes in v2: main model = Sonnet 5.5; prompt-technique lab (course requirement); RAG phase 2 with embedding model options.
+Changes in v3 (2026-11-03, after reviewing the app against the course brief): see §8.
 
 ## 1. Goal
 A personal interview-prep tool for technical roles (Full-stack, Frontend, Backend, AI Engineer, AI Agent Developer, Product Engineer, ...).
@@ -139,15 +140,29 @@ Later (not in Sprint 1): voice answers (OpenRouter STT), CV upload for skill-gap
 - **Fri Nov 6**: Prompt Lab page + run the comparison and record results; README (architecture, security design, prompt-technique results, how to run); tests pass; UI polish; demo run.
 - **Phase 2 (week 3 of the course)**: RAG personal knowledge base.
 
-## 6. Decisions so far
-- Main model: `anthropic/claude-sonnet-5.5` (decided by Sonali).
-- Guard classifier on Haiku 5.5 (proposed, pending OK).
+## 6. Decisions
+- Main model: `anthropic/claude-sonnet-5.5` (decided by Sonali). Sidebar list = the three course models
+  (`anthropic/claude-sonnet-5.5`, `openai/gpt-6-luna`, `openai/gpt-6.1-sol`).
+- Guard classifier: `anthropic/claude-haiku-4.5` (Haiku 5.5 is blocked by the key's allowlist).
+- Guard design: rule-based + Haiku classifier + OpenRouter native guardrails (403 → logged block). Approved.
+- Local JSON history on by default. Approved.
 - Embeddings: `qwen/qwen3-embedding-8b` default, OpenAI small/large selectable (phase 2).
-- Prompt requirement: 5 system prompts with different techniques, compared in a Prompt Lab.
+- RAG, LangChain, deployment: after Sprint 1.
+- Working style: Claude scaffolds and documents decisions; Sonali writes/tunes the prompt variants herself.
 
 ## 7. Still open
-1. Guard design (rule-based + Haiku classifier + OpenRouter native guardrails) — OK?
-2. Local JSON history on by default — OK?
-3. RAG: phase 2 after Sprint 1, or does the brief require it in Sprint 1?
-4. Any other items in the brief (security checks, docs, deployment)?
-5. Working style: I scaffold and document decisions; you write/tune the prompt variants yourself (you must defend them in review) — OK?
+Nothing blocking. Image generation and open-source models (optional tasks) are skipped for Sprint 1.
+
+## 8. v3 — gap closure after the brief review (2026-11-03)
+Checked the app against the course task description. Core requirements were met; these items were
+added because they are explicitly listed optional tasks and cheap given the existing structure:
+
+| # | Item | Brief task | Design |
+|---|---|---|---|
+| 1 | Model list fixed to the course models | "Choose one of the following models" | `AVAILABLE_MODELS` = Sonnet 5.5, gpt-6-luna, gpt-6.1-sol. Haiku 4.5 stays guard-only. |
+| 2 | Developer settings: temperature + max-tokens sliders | Medium: "all model settings as sliders" | `GuardPipeline.overrides` (`CallOverrides`): when set, temperature applies to every main-model call; max tokens applies to text calls (`chat`/`stream`) only, because structured calls size their own JSON budget and a small cap would truncate them. The guard classifier is never affected. Default = per-task values. |
+| 3 | LLM-as-a-judge in the Prompt Lab | Hard: "assess the performance of your prompt via LLM-as-a-judge" | `judge_feedback.md` prompt + `JudgeVerdict` schema (accuracy, specificity, actionability, calibration, overall, rationale). Runs once per variant in parallel after the comparison; judge model is selectable (default gpt-6-luna, a different family than the one that wrote the feedback, to reduce self-preference bias). Judge score is stored per record and shown in the leaderboard next to the human rating. |
+| 4 | Jailbreak experiment → Excel | Medium: "try to jailbreak your own application … results in an Excel sheet" | `scripts/jailbreak_experiment.py`: ~30 attack and control inputs through the rule guard (offline) and, with `--live`, the LLM guard. Writes `docs/jailbreak_experiment.xlsx` (results + summary sheet). |
+| 5 | Prompt Lab results recorded | Core: "check which one works best" | `scripts/run_prompt_lab.py` runs all variants on the three sample answers (+ judge) and appends to `data/prompt_lab.json`; the README Results table is filled from it. Human usefulness ratings are added by Sonali in the Lab UI. |
+| 6 | Temperature experiment | Easy: "tune one model setting and compare" | Same script, `--temperature-sweep`: zero-shot at 0.2 and 1.0, twice each; score spread recorded in the README. |
+| 7 | Small fixes | — | README guard model name; mock-mode scoring errors are shown instead of swallowed; guided mode collects the optional note for the coach; sessions are saved after every answer so an abandoned session is resumable from the dashboard. |

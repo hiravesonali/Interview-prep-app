@@ -62,6 +62,17 @@ class AnswerFeedback(BaseModel):
     follow_up_question: str
 
 
+class JudgeVerdict(BaseModel):
+    """LLM-as-a-judge rating of one piece of feedback (Prompt Lab)."""
+
+    accuracy: int = Field(ge=1, le=5)
+    specificity: int = Field(ge=1, le=5)
+    actionability: int = Field(ge=1, le=5)
+    calibration: int = Field(ge=1, le=5)
+    overall: int = Field(ge=1, le=5)
+    rationale: str = Field(description="At most three sentences")
+
+
 # ---------- Feature 2: job description analysis ----------
 
 

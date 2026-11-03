@@ -39,11 +39,9 @@ def _hero() -> None:
                 '<span class="hoot-chip">📄 Questions from a real job description</span></div>'
             )
             b1, b2, _ = st.columns([1.3, 1.4, 1.5])
-            if b1.button("Start practising  →", key="hero_primary", use_container_width=True):
+            if b1.button("Start practising  →", key="hero_primary", width="stretch"):
                 st.switch_page(st.session_state.pages["practice"])
-            if b2.button(
-                "📄  Use a job description", key="hero_secondary", use_container_width=True
-            ):
+            if b2.button("📄  Use a job description", key="hero_secondary", width="stretch"):
                 st.switch_page(st.session_state.pages["jd"])
         with right:
             st.html(
@@ -102,7 +100,7 @@ def _role_card(role: Role, i: int) -> None:
             f'<div class="hoot-role-name">{html.escape(role.name)}</div>'
             f'<div class="hoot-role-topics">{html.escape(topics)}…</div>'
         )
-        if st.button("Practise", key=f"role_btn_{i}", use_container_width=True):
+        if st.button("Practise", key=f"role_btn_{i}", width="stretch"):
             st.session_state.selected_role = role.name
             st.session_state.custom_title = ""
             st.switch_page(st.session_state.pages["practice"])
@@ -123,7 +121,7 @@ def _recent_sessions() -> None:
             c1.markdown(f"**{s.role}** · {s.mode} · {s.started_at:%d %b %Y %H:%M}")
             c2.markdown(f"{s.answered}/{s.questions} answered")
             c3.markdown(f"⭐ {s.overall_average:.1f}/5" if s.answered else "—")
-            if c4.button("Open", key=f"open-{s.path.name}", use_container_width=True):
+            if c4.button("Open", key=f"open-{s.path.name}", width="stretch"):
                 st.session_state.practice = load_session(s.path)
                 st.switch_page(st.session_state.pages["practice"])
 

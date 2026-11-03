@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
+from dataclasses import dataclass
 from typing import TypeVar
 
 from openai import PermissionDeniedError
@@ -17,6 +18,25 @@ from interview_app.guard.output_guard import OutputGuard
 from interview_app.llm.client import ChatResult, Message, OpenRouterClient, StructuredResult
 
 T = TypeVar("T", bound=BaseModel)
+
+
+@dataclass
+class CallOverrides:
+    """Developer settings from the sidebar. `None` keeps each call's own default.
+
+    `temperature` applies to every main-model call. `max_tokens` applies to text calls only
+    (`chat`, `stream`): structured calls size their JSON budget per task, and a small cap
+    would truncate them. The guard classifier is never affected.
+    """
+
+    temperature: float | None = None
+    max_tokens: int | None = None
+
+    def pick_temperature(self, default: float) -> float:
+        return default if self.temperature is None else self.temperature
+
+    def pick_max_tokens(self, default: int) -> int:
+        return default if self.max_tokens is None else self.max_tokens
 
 
 class GuardBlocked(Exception):
@@ -43,6 +63,7 @@ class GuardPipeline:
         self.llm_guard_enabled = (
             settings.llm_guard_enabled if llm_guard_enabled is None else llm_guard_enabled
         )
+        self.overrides = CallOverrides()
 
     # ----- input side -----
 
@@ -95,6 +116,7 @@ class GuardPipeline:
         user_template: str = "{input}",
         model: str | None = None,
         temperature: float = 0.4,
+        max_tokens: int = 2000,
         purpose: str = "chat",
     ) -> ChatResult:
         safe = self.check_input(user_text, kind)
@@ -102,7 +124,8 @@ class GuardPipeline:
             result = self.client.chat(
                 self._build_messages(system_prompt, safe.text, history, user_template),
                 model=model,
-                temperature=temperature,
+                temperature=self.overrides.pick_temperature(temperature),
+                max_tokens=self.overrides.pick_max_tokens(max_tokens),
                 purpose=purpose,
             )
         except PermissionDeniedError as err:
@@ -130,12 +153,14 @@ class GuardPipeline:
                 self._build_messages(system_prompt, safe.text, history, user_template),
                 schema,
                 model=model,
-                temperature=temperature,
+                temperature=self.overrides.pick_temperature(temperature),
                 max_tokens=max_tokens,
                 purpose=purpose,
             )
         except PermissionDeniedError as err:
             raise GuardBlocked(self._openrouter_block(err)) from err
+        # For JSON we only need the block decision (leak); a "sanitized" copy of the raw text
+        # is not used because the validated pydantic object is what the UI renders.
         self.check_output(result.raw, system_prompt)
         return result
 
@@ -149,6 +174,7 @@ class GuardPipeline:
         user_template: str = "{input}",
         model: str | None = None,
         temperature: float = 0.5,
+        max_tokens: int = 2000,
         purpose: str = "stream",
     ) -> Iterator[str]:
         """Yield deltas as they arrive; the output guard runs on the full text at the end.
@@ -162,7 +188,8 @@ class GuardPipeline:
             for delta in self.client.stream(
                 self._build_messages(system_prompt, safe.text, history, user_template),
                 model=model,
-                temperature=temperature,
+                temperature=self.overrides.pick_temperature(temperature),
+                max_tokens=self.overrides.pick_max_tokens(max_tokens),
                 purpose=purpose,
             ):
                 chunks.append(delta)

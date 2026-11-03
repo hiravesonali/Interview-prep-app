@@ -7,12 +7,13 @@ security guard also runs per variant (cheap, and keeps the single choke point in
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from interview_app.features.practice import evaluate_answer_detailed
-from interview_app.guard import GuardBlocked, GuardPipeline
+from interview_app.guard import GuardBlocked, GuardPipeline, InputKind
 from interview_app.llm.client import StructuredOutputError, Usage
-from interview_app.models import AnswerFeedback, Question, QuestionType
+from interview_app.llm.prompts import render_prompt
+from interview_app.models import AnswerFeedback, JudgeVerdict, Question, QuestionType
 
 SAMPLE_QUESTION = Question(
     id=1,
@@ -66,6 +67,9 @@ class LabResult:
     feedback: AnswerFeedback | None
     usage: Usage | None
     error: str | None = None
+    judge: JudgeVerdict | None = None
+    judge_usage: Usage | None = None
+    judge_error: str | None = None
 
     @property
     def ok(self) -> bool:
@@ -97,3 +101,82 @@ def run_comparison(
 
     with ThreadPoolExecutor(max_workers=max_workers) as pool:
         return list(pool.map(one, techniques))
+
+
+# ---------- LLM-as-a-judge ----------
+
+_JUDGE_TEMPLATE = """Question type: {type}
+Topic: {topic}
+Interview question: {question}
+Points a strong answer covers: {covers}
+
+<candidate_answer>
+{input}
+</candidate_answer>
+
+<feedback>
+{feedback}
+</feedback>"""
+
+
+def judge_feedback(
+    pipe: GuardPipeline,
+    role: str,
+    question: Question,
+    answer: str,
+    feedback: AnswerFeedback,
+    *,
+    model: str | None = None,
+) -> tuple[JudgeVerdict, Usage]:
+    """Rate one feedback object against the judge rubric. The feedback is app-generated,
+    so it goes into the template; only the candidate's answer passes through the guard."""
+    template = (
+        _JUDGE_TEMPLATE.replace("{type}", question.type.value)
+        .replace("{topic}", question.topic)
+        .replace("{question}", question.question)
+        .replace("{covers}", "; ".join(question.strong_answer_covers) or "not specified")
+        .replace("{feedback}", feedback.model_dump_json(indent=1, exclude_none=True))
+    )
+    result = pipe.structured(
+        render_prompt("judge_feedback", role=role),
+        answer,
+        InputKind.ANSWER,
+        JudgeVerdict,
+        user_template=template,
+        model=model,
+        temperature=0.0,
+        # Reasoning-style models (gpt-6-luna) spend completion tokens on thinking; 600 was
+        # hit intermittently, which surfaces as a truncated JSON error.
+        max_tokens=2000,
+        purpose="judge",
+    )
+    return result.data, result.usage
+
+
+def judge_results(
+    pipe: GuardPipeline,
+    role: str,
+    question: Question,
+    answer: str,
+    results: list[LabResult],
+    *,
+    model: str | None = None,
+    max_workers: int = 5,
+) -> list[LabResult]:
+    """Attach a judge verdict to every successful result (parallel, order preserved)."""
+
+    def one(r: LabResult) -> LabResult:
+        if r.feedback is None:
+            return r
+        try:
+            verdict, usage = judge_feedback(pipe, role, question, answer, r.feedback, model=model)
+        except GuardBlocked as err:
+            return replace(r, judge_error=f"blocked by guard: {err.decision.reason}")
+        except StructuredOutputError as err:
+            return replace(r, judge_error=f"invalid output: {err}")
+        except Exception as err:  # provider / network
+            return replace(r, judge_error=f"{err.__class__.__name__}: {err}")
+        return replace(r, judge=verdict, judge_usage=usage)
+
+    with ThreadPoolExecutor(max_workers=max_workers) as pool:
+        return list(pool.map(one, results))

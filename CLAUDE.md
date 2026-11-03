@@ -22,7 +22,8 @@ Three features, one dashboard, every LLM call routed through a security guard to
 - **Prompt Lab**: the course requirement "5 system prompts with different techniques, compare
   them". Five feedback prompts (zero-shot, few-shot, chain-of-thought, role+rubric,
   self-critique) run in parallel on the same answer; ratings go to `data/prompt_lab.json` and
-  feed a leaderboard. The README has a **Results** placeholder for the winner.
+  feed a leaderboard. The README **Results** section records the 2026-11-03 run (winner: role + rubric) and the
+  temperature sweep; rerun the scripts and update it if the prompts change.
 
 ## Working agreement
 
@@ -47,6 +48,8 @@ uv run pytest tests/test_input_guard.py   # one file
 uv run pytest -k "redact"                 # by name
 uv run ruff check . && uv run ruff format --check .
 uv run ruff format .                      # fix formatting
+uv run python scripts/run_prompt_lab.py --dry-run      # Prompt Lab from the CLI (drop --dry-run to spend ~$0.26)
+uv run python scripts/jailbreak_experiment.py [--live] # guard attack matrix → docs/jailbreak_experiment.xlsx
 ```
 
 Ruff: line length 100, rules E/F/I/UP/B/SIM; `ui/theme.py` is exempt from E501 (CSS/SVG strings).
@@ -69,7 +72,10 @@ app-authored context (the question, role, etc.) never passes through the guard a
 are safe. A block raises `GuardBlocked(decision)`; pages render it with
 `components.show_guard_block`. `stream` runs the output guard only after the full text, so a
 caller must be ready to replace what it already displayed. A `PermissionDeniedError` (403) from
-OpenRouter is converted into an `openrouter_guardrail` block.
+OpenRouter is converted into an `openrouter_guardrail` block. `pipe.overrides` (`CallOverrides`)
+carries the sidebar's temperature/max-tokens override: temperature applies to all main-model
+calls, max tokens only to `chat`/`stream` (structured calls keep their own budget); the guard
+classifier is never affected.
 
 **LLM client** (`llm/client.py`): the `openai` SDK with `base_url` swapped to OpenRouter.
 Cost comes from OpenRouter's `usage.cost` (requested with `extra_body={"usage": {"include": True}}`)
@@ -83,10 +89,12 @@ non-ASCII app title once broke every request and silently made the LLM guard fai
 (`load_prompt("feedback/01_zero_shot")`, `render_prompt(name, **vars)` substitutes `{{var}}`;
 JSON braces stay untouched). `list_prompts("feedback")` is how the Prompt Lab discovers variants,
 so adding a file there adds a technique. Every structured call has its pydantic schema in
-`models.py`.
+`models.py`. The Lab's LLM judge (`judge_feedback.md`, `JudgeVerdict`) rates each variant's
+feedback; the judge model defaults to a different family than the feedback model. Reasoning-style
+models (gpt-6-luna) spend completion tokens on thinking, so give them a generous `max_tokens`.
 
 **Models**: main `anthropic/claude-sonnet-5.5` (sidebar-switchable among `AVAILABLE_MODELS` in
-`config.py`), guard `anthropic/claude-haiku-4.5`. Haiku 5.5 is blocked by the course API key's
+`config.py`, which must stay the three course-allowed models), guard `anthropic/claude-haiku-4.5`. Haiku 5.5 is blocked by the course API key's
 OpenRouter model allowlist, so do not switch the guard to it. Settings come from `.env` via
 pydantic-settings (`config.Settings`, cached by `get_settings()`).
 

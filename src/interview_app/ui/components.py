@@ -62,7 +62,8 @@ def render_sidebar_controls(active: str) -> None:
             else:
                 st.page_link(st.session_state.pages[key], label=label, icon=icon)
 
-        with st.expander("⚙️ Settings"):
+        with st.expander("⚙️ Developer settings"):
+            st.caption("Model, sampling and guard knobs. Regular users never need these.")
             models = list(AVAILABLE_MODELS)
             if s.default_model not in models:
                 models.insert(0, s.default_model)
@@ -84,6 +85,7 @@ def render_sidebar_controls(active: str) -> None:
                 format_func=technique_label,
                 help="Which system-prompt variant scores your answers (see Prompt Lab).",
             )
+            _render_sampling_controls(pipe)
 
         # Filled after the page ran (see app.py) so cost and log reflect this run.
         st.session_state.sidebar_dynamic = st.container()
@@ -95,6 +97,38 @@ def render_sidebar_controls(active: str) -> None:
                 f'<div class="n">{html.escape(s.user_name)}</div>'
                 f'<div class="e">{html.escape(s.user_email)}</div></div></div>'
             )
+
+
+def _render_sampling_controls(pipe) -> None:
+    """Temperature / max-tokens sliders. Off = each task keeps its own tuned defaults."""
+    custom = st.toggle(
+        "Override temperature & max tokens",
+        value=pipe.overrides.temperature is not None,
+        help=(
+            "Default: question generation 0.6, feedback/JD analysis 0.2, coaching 0.5; "
+            "max tokens sized per task. Turn on to experiment."
+        ),
+    )
+    if not custom:
+        pipe.overrides.temperature = None
+        pipe.overrides.max_tokens = None
+        return
+    pipe.overrides.temperature = st.slider(
+        "Temperature",
+        0.0,
+        1.5,
+        value=pipe.overrides.temperature if pipe.overrides.temperature is not None else 0.4,
+        step=0.1,
+        help="Applies to every call to the main model. Lower = more deterministic scoring.",
+    )
+    pipe.overrides.max_tokens = st.slider(
+        "Max tokens (coaching text)",
+        200,
+        4000,
+        value=pipe.overrides.max_tokens or 2000,
+        step=100,
+        help="Caps the streamed coaching reply. Structured JSON calls keep their own budget.",
+    )
 
 
 def render_sidebar_dynamic() -> None:

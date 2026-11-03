@@ -12,11 +12,12 @@ from pathlib import Path
 from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# Models offered in the sidebar selector. The first entry is the default.
+# Models offered in the sidebar selector: the three models allowed by the course brief.
+# The first entry is the default. The guard model (Haiku 4.5) is deliberately not here.
 AVAILABLE_MODELS: tuple[str, ...] = (
     "anthropic/claude-sonnet-5.5",
-    "anthropic/claude-haiku-4.5",
-    "openai/gpt-5-mini",
+    "openai/gpt-6-luna",
+    "openai/gpt-6.1-sol",
 )
 
 

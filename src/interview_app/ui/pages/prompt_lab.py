@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import streamlit as st
 
+from interview_app.config import AVAILABLE_MODELS
 from interview_app.features.prompt_lab import (
     SAMPLE_ANSWERS,
     SAMPLE_QUESTION,
     LabResult,
+    judge_results,
     run_comparison,
 )
 from interview_app.llm.prompts import list_prompts
@@ -32,9 +34,10 @@ def render() -> None:
     )
     question, answer, role = _pick_input()
     techniques = _pick_techniques()
+    judge_model = _pick_judge()
 
     if st.button("Run comparison", type="primary", disabled=not (question and answer.strip())):
-        _run(role, question, answer, techniques)
+        _run(role, question, answer, techniques, judge_model)
 
     results: list[LabResult] | None = st.session_state.get("lab_results")
     if results:
@@ -102,17 +105,39 @@ def _pick_techniques() -> list[str]:
     )
 
 
+def _pick_judge() -> str | None:
+    """LLM-as-a-judge: rates each feedback on accuracy, specificity, actionability and
+    calibration. Default judge is a different model family than the one writing the
+    feedback, to reduce self-preference bias."""
+    c1, c2 = st.columns([1, 2])
+    enabled = c1.toggle("LLM judge", value=True, help="Adds one judge call per variant.")
+    models = list(AVAILABLE_MODELS)
+    preferred = next((m for m in models if m != state.current_model()), models[0])
+    judge_model = c2.selectbox(
+        "Judge model", models, index=models.index(preferred), disabled=not enabled
+    )
+    return judge_model if enabled else None
+
+
 # ---------- run + results ----------
 
 
-def _run(role: str, question: Question, answer: str, techniques: list[str]) -> None:
+def _run(
+    role: str, question: Question, answer: str, techniques: list[str], judge_model: str | None
+) -> None:
     if not techniques:
         st.warning("Pick at least one technique.")
         return
     with st.spinner(f"Running {len(techniques)} variants in parallel… (10-30 s)"):
-        st.session_state.lab_results = run_comparison(
+        results = run_comparison(
             state.pipeline(), role, question, answer, techniques, model=state.current_model()
         )
+    if judge_model:
+        with st.spinner(f"Judging the results with {judge_model}…"):
+            results = judge_results(
+                state.pipeline(), role, question, answer, results, model=judge_model
+            )
+    st.session_state.lab_results = results
     st.session_state.lab_ratings = {}
 
 
@@ -130,6 +155,19 @@ def _show_results(results: list[LabResult], question: Question | None, answer: s
             st.caption(" · ".join(f"{s.dimension[:4]} {s.score}" for s in fb.scores))
             st.caption(f"${u.cost_usd:.4f} · {u.total_tokens:,} tok · {u.latency_s:.1f}s")
             st.caption(f"{len(fb.strengths)} strengths · {len(fb.gaps)} gaps")
+            if r.judge:
+                j = r.judge
+                st.metric(
+                    "Judge", f"{j.overall} / 5", help="LLM-as-a-judge rating of this feedback"
+                )
+                st.caption(
+                    f"acc {j.accuracy} · spec {j.specificity} · act {j.actionability} · "
+                    f"cal {j.calibration}"
+                )
+                with st.expander("Judge rationale"):
+                    st.write(j.rationale)
+            elif r.judge_error:
+                st.caption(f"Judge failed: {r.judge_error}")
             with st.expander("Full feedback"):
                 render_feedback(fb)
             stars = st.feedback("stars", key=f"rate_{r.technique}")
@@ -150,6 +188,8 @@ def _show_results(results: list[LabResult], question: Question | None, answer: s
                 tokens=r.usage.total_tokens,
                 rating=st.session_state.lab_ratings.get(r.technique),
                 note=note,
+                judge_overall=r.judge.overall if r.judge else None,
+                judge_model=r.judge_usage.model if r.judge_usage else "",
             )
             for r in results
             if r.ok and r.feedback is not None and r.usage is not None
@@ -172,7 +212,8 @@ def _leaderboard() -> None:
                 "Technique": technique_label(r.technique),
                 "Runs": r.runs,
                 "Your rating (avg)": r.avg_rating,
-                "Model's overall (avg)": r.avg_overall,
+                "LLM judge (avg)": r.avg_judge,
+                "Score given to answer (avg)": r.avg_overall,
                 "Cost / run ($)": r.avg_cost_usd,
                 "Latency (s)": r.avg_latency_s,
                 "Tokens": r.avg_tokens,
@@ -180,6 +221,6 @@ def _leaderboard() -> None:
             for r in rows
         ],
         hide_index=True,
-        use_container_width=True,
+        width="stretch",
     )
     st.caption(f"{len(records)} saved runs · stored in data/prompt_lab.json")
