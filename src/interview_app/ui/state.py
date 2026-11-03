@@ -24,7 +24,8 @@ def init_state() -> None:
     st.session_state.model = settings.default_model
     st.session_state.selected_role = None
     st.session_state.custom_title = ""
-    st.session_state.feedback_technique = "feedback/01_zero_shot"
+    # Default grader = the Prompt Lab winner (README → Results).
+    st.session_state.feedback_technique = "feedback/04_role_rubric"
     st.session_state.practice = None
     st.session_state.pending_question_set = None
     st.session_state.jd_analysis = None

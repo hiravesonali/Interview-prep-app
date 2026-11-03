@@ -29,12 +29,13 @@ from interview_app.ui.components import render_feedback, section_header, techniq
 def render() -> None:
     section_header(
         "Prompt <span>Lab</span>",
-        "One question and answer, several system-prompt techniques. Compare quality, cost and "
-        "latency, rate each result, and the leaderboard builds up over time.",
+        "Developer tool: the same answer graded by five system-prompt techniques. "
+        "Rate the results; the best one becomes the default grader (Developer settings).",
     )
     question, answer, role = _pick_input()
-    techniques = _pick_techniques()
-    judge_model = _pick_judge()
+    with st.expander("Options · techniques and LLM judge"):
+        techniques = _pick_techniques()
+        judge_model = _pick_judge()
 
     if st.button("Run comparison", type="primary", disabled=not (question and answer.strip())):
         _run(role, question, answer, techniques, judge_model)

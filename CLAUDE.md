@@ -19,7 +19,8 @@ Three features, one dashboard, every LLM call routed through a security guard to
   saved as JSON in `data/sessions/`.
 - **JD analyzer**: paste a job description → skills, likely questions, day-by-day prep plan,
   then a hand-off button that pre-loads a practice session with the JD's questions.
-- **Prompt Lab**: the course requirement "5 system prompts with different techniques, compare
+- **Prompt Lab** (developer tool, linked from the sidebar's Developer settings expander, not the
+  main menu): the course requirement "5 system prompts with different techniques, compare
   them". Five feedback prompts (zero-shot, few-shot, chain-of-thought, role+rubric,
   self-critique) run in parallel on the same answer; ratings go to `data/prompt_lab.json` and
   feed a leaderboard. The README **Results** section records the 2026-11-03 run (winner: role + rubric) and the
@@ -102,7 +103,8 @@ pydantic-settings (`config.Settings`, cached by `get_settings()`).
 pipeline per browser session in `st.session_state`; pages get them through the accessor
 functions there. Pages are plain `render()` functions registered in `app.py`; the default page
 must not set `url_path`. The sidebar is custom (`st.navigation(position="hidden")` +
-`st.page_link`), built in `components.render_sidebar_controls` before `nav.run()` and
+`st.page_link`; `NAV` = user menu, `DEV_NAV` = tools inside Developer settings), built in
+`components.render_sidebar_controls` before `nav.run()` and
 `render_sidebar_dynamic` (cost card, security log) after it so the log is current for this run.
 
 **Theme** (`ui/theme.py` + `.streamlit/config.toml`): the native theme in `config.toml` must

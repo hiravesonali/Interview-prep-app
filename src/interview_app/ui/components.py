@@ -22,12 +22,14 @@ _TECHNIQUE_LABELS = {
 }
 
 # key -> (label, icon). Order = sidebar order. Keys match app.py's pages dict.
+# The Prompt Lab is a developer tool (course evidence), so it is linked from the
+# Developer settings expander instead of the user-facing menu.
 NAV: dict[str, tuple[str, str]] = {
     "home": ("Dashboard", "🏠"),
     "practice": ("Practice session", "🗣️"),
     "jd": ("JD analyzer", "📄"),
-    "lab": ("Prompt Lab", "🧪"),
 }
+DEV_NAV: dict[str, tuple[str, str]] = {"lab": ("Prompt Lab", "🧪")}
 
 
 def technique_label(name: str) -> str:
@@ -56,13 +58,9 @@ def render_sidebar_controls(active: str) -> None:
             st.error("No OPENROUTER_API_KEY found. Copy `.env.example` to `.env` and add your key.")
 
         st.html('<div class="hoot-menu-label">MAIN MENU</div>')
-        for key, (label, icon) in NAV.items():
-            if key == active:
-                st.html(f'<div class="hoot-nav-active"><span>{icon}</span>{label}</div>')
-            else:
-                st.page_link(st.session_state.pages[key], label=label, icon=icon)
+        _nav_links(NAV, active)
 
-        with st.expander("⚙️ Developer settings"):
+        with st.expander("⚙️ Developer settings", expanded=active in DEV_NAV):
             st.caption("Model, sampling and guard knobs. Regular users never need these.")
             models = list(AVAILABLE_MODELS)
             if s.default_model not in models:
@@ -86,6 +84,9 @@ def render_sidebar_controls(active: str) -> None:
                 help="Which system-prompt variant scores your answers (see Prompt Lab).",
             )
             _render_sampling_controls(pipe)
+            st.html('<div class="hoot-menu-label">TOOLS</div>')
+            _nav_links(DEV_NAV, active)
+            st.caption("Compare the five feedback prompts and pick the default grader above.")
 
         # Filled after the page ran (see app.py) so cost and log reflect this run.
         st.session_state.sidebar_dynamic = st.container()
@@ -97,6 +98,14 @@ def render_sidebar_controls(active: str) -> None:
                 f'<div class="n">{html.escape(s.user_name)}</div>'
                 f'<div class="e">{html.escape(s.user_email)}</div></div></div>'
             )
+
+
+def _nav_links(items: dict[str, tuple[str, str]], active: str) -> None:
+    for key, (label, icon) in items.items():
+        if key == active:
+            st.html(f'<div class="hoot-nav-active"><span>{icon}</span>{label}</div>')
+        else:
+            st.page_link(st.session_state.pages[key], label=label, icon=icon)
 
 
 def _render_sampling_controls(pipe) -> None:

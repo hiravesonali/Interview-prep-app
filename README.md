@@ -14,7 +14,7 @@ through a **security guard** to the **OpenRouter** API.
 | Cost / token meter per session | ✅ day 1 |
 | Practice session: generated or JD-based questions, guided or mock mode, structured feedback, summary, retry weak ones, local history | ✅ day 2 |
 | Job-description analyzer: skills, likely questions, prep plan → practice hand-off | ✅ day 2 |
-| Prompt Lab: 5 system-prompt techniques compared on the same answer, rated, leaderboard | ✅ day 3 |
+| Prompt Lab (developer tool, linked from Developer settings): 5 system-prompt techniques compared on the same answer, rated, leaderboard | ✅ day 3 |
 | LLM-as-a-judge in the Prompt Lab (cross-model judge, rubric, leaderboard column) | ✅ day 3 |
 | Developer settings: model, temperature, max tokens, guard toggle, feedback technique | ✅ day 3 |
 | Jailbreak experiment: 31 attacks and controls → `docs/jailbreak_experiment.xlsx` | ✅ day 3 |
@@ -121,8 +121,9 @@ hidden inside a job description.
 ## Prompt engineering: five techniques, one task
 
 The answer-feedback task has five system prompts in `src/interview_app/llm/prompts/feedback/`,
-one per technique. The sidebar selects which one scores your answers; the **Prompt Lab** page runs
-all five on the same question and answer in parallel, shows score, cost, latency and the full
+one per technique. Developer settings select which one scores your answers (default: the Lab
+winner, role + rubric); the **Prompt Lab** page, linked from the same expander because it is a
+developer tool rather than a user feature, runs all five on the same question and answer in parallel, shows score, cost, latency and the full
 feedback side by side, and stores your 1-5 usefulness rating in `data/prompt_lab.json`. The
 leaderboard aggregates every saved run.
 
