@@ -9,7 +9,7 @@ from interview_app.guard import GuardBlocked
 from interview_app.llm.client import StructuredOutputError
 from interview_app.models import JobAnalysis, QuestionType
 from interview_app.ui import state
-from interview_app.ui.components import render_question_card, show_guard_block
+from interview_app.ui.components import render_question_card, section_header, show_guard_block
 
 _TYPE_LABELS = {
     QuestionType.TECHNICAL: "Technical",
@@ -20,8 +20,10 @@ _TYPE_LABELS = {
 
 
 def render() -> None:
-    st.title("📄 Job description analyzer")
-    st.caption("Paste a JD → required skills, likely interview questions, day-by-day prep plan.")
+    section_header(
+        "Analyse a <span>job description</span>",
+        "Paste a JD → required skills, likely interview questions, day-by-day prep plan.",
+    )
 
     with st.form("jd_form"):
         jd_text = st.text_area(

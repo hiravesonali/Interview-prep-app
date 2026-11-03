@@ -1,0 +1,37 @@
+# Base colours mirror PALETTES[ACTIVE_PALETTE] in src/interview_app/ui/theme.py (violet-amber).
+[theme]
+base = "light"
+primaryColor = "#F59E0B"
+backgroundColor = "#FAFAFA"
+secondaryBackgroundColor = "#F5F3FF"
+textColor = "#27272A"
+linkColor = "#7C3AED"
+font = "Plus Jakarta Sans, Inter, sans-serif"
+headingFont = "Plus Jakarta Sans, Inter, sans-serif"
+baseFontSize = 15
+baseRadius = "12px"
+buttonRadius = "12px"
+borderColor = "#E4E4E7"
+showSidebarBorder = true
+
+[[theme.fontFaces]]
+family = "Plus Jakarta Sans"
+url = "https://fonts.gstatic.com/s/plusjakartasans/v12/LDIoaomQNQcsA88c7O9yZ4KMCoOg4Ko20yygg_vb.woff2"
+weight = "200 800"
+style = "normal"
+
+[[theme.fontFaces]]
+family = "Inter"
+url = "https://fonts.gstatic.com/s/inter/v20/UcC73FwrK3iLTeHuS_nVMrMxCp50SjIa1ZL7W0Q5nw.woff2"
+weight = "100 900"
+style = "normal"
+
+[theme.sidebar]
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#FAFAFA"
+
+[server]
+headless = true
+
+[browser]
+gatherUsageStats = false

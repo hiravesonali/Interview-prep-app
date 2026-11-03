@@ -34,7 +34,9 @@ class Settings(BaseSettings):
 
     max_session_cost_usd: float = 2.0
 
-    app_title: str = "Interview Practice App"
+    app_title: str = "Hoot – AI Interview Prep"
+    user_name: str = ""
+    user_email: str = ""
     app_url: str = "http://localhost:8501"
     data_dir: Path = Path("data")
 

@@ -1,6 +1,8 @@
-"""Reusable UI pieces: sidebar controls, cost meter, security log, guard error banner."""
+"""Reusable UI pieces: branded sidebar, cost card, security log, question/feedback cards."""
 
 from __future__ import annotations
+
+import html
 
 import streamlit as st
 
@@ -9,6 +11,7 @@ from interview_app.guard import GuardBlocked
 from interview_app.llm.prompts import list_prompts
 from interview_app.models import AnswerFeedback, Question
 from interview_app.ui import state
+from interview_app.ui.theme import APP_NAME, APP_TAGLINE, mascot
 
 _TECHNIQUE_LABELS = {
     "01_zero_shot": "Zero-shot",
@@ -18,88 +21,119 @@ _TECHNIQUE_LABELS = {
     "05_self_critique": "Self-critique",
 }
 
+# key -> (label, icon). Order = sidebar order. Keys match app.py's pages dict.
+NAV: dict[str, tuple[str, str]] = {
+    "home": ("Dashboard", "🏠"),
+    "practice": ("Practice session", "🗣️"),
+    "jd": ("JD analyzer", "📄"),
+    "lab": ("Prompt Lab", "🧪"),
+}
+
 
 def technique_label(name: str) -> str:
     stem = name.rsplit("/", 1)[-1]
     return _TECHNIQUE_LABELS.get(stem, stem)
 
 
-def render_sidebar_controls() -> None:
-    """Static controls. Call before the page runs so pages see the chosen values."""
+# ---------- sidebar ----------
+
+
+def render_sidebar_controls(active: str) -> None:
+    """Brand, welcome, menu and settings. Runs before the page so pages see the values."""
     s = state.settings()
+    first_name = (s.user_name.split() or ["there"])[0]
     with st.sidebar:
-        st.markdown("### ⚙️ Settings")
+        with st.container(key="brand"):  # sticky; see theme.py
+            st.html(
+                f'<div class="hoot-brand">{mascot(52)}<div><div class="name">{APP_NAME}</div>'
+                f'<div class="tag">{APP_TAGLINE}</div></div></div>'
+            )
+        st.html(
+            f'<div class="hoot-welcome">Welcome <b>{html.escape(first_name)}</b> 👋<br>'
+            f"<span class='sub'>Let's practise 🚀</span></div>"
+        )
         if not s.has_api_key:
             st.error("No OPENROUTER_API_KEY found. Copy `.env.example` to `.env` and add your key.")
 
-        models = list(AVAILABLE_MODELS)
-        if s.default_model not in models:
-            models.insert(0, s.default_model)
-        st.session_state.model = st.selectbox(
-            "Model", models, index=models.index(st.session_state.model), key="model_select"
-        )
+        st.html('<div class="hoot-menu-label">MAIN MENU</div>')
+        for key, (label, icon) in NAV.items():
+            if key == active:
+                st.html(f'<div class="hoot-nav-active"><span>{icon}</span>{label}</div>')
+            else:
+                st.page_link(st.session_state.pages[key], label=label, icon=icon)
 
-        pipe = state.pipeline()
-        pipe.llm_guard_enabled = st.toggle(
-            "LLM guard (classifier)",
-            value=pipe.llm_guard_enabled,
-            help=f"Runs every input through {s.guard_model} after the rule-based guard.",
-        )
+        with st.expander("⚙️ Settings"):
+            models = list(AVAILABLE_MODELS)
+            if s.default_model not in models:
+                models.insert(0, s.default_model)
+            st.session_state.model = st.selectbox(
+                "Model", models, index=models.index(st.session_state.model), key="model_select"
+            )
+            pipe = state.pipeline()
+            pipe.llm_guard_enabled = st.toggle(
+                "LLM guard (classifier)",
+                value=pipe.llm_guard_enabled,
+                help=f"Runs every input through {s.guard_model} after the rule-based guard.",
+            )
+            techniques = list_prompts("feedback")
+            current = st.session_state.get("feedback_technique", techniques[0])
+            st.session_state.feedback_technique = st.selectbox(
+                "Feedback prompt technique",
+                techniques,
+                index=techniques.index(current) if current in techniques else 0,
+                format_func=technique_label,
+                help="Which system-prompt variant scores your answers (see Prompt Lab).",
+            )
 
-        techniques = list_prompts("feedback")
-        st.session_state.feedback_technique = st.selectbox(
-            "Feedback prompt technique",
-            techniques,
-            index=techniques.index(st.session_state.get("feedback_technique", techniques[0])),
-            format_func=technique_label,
-            help="Which of the system-prompt variants scores your answers (see Prompt Lab).",
-        )
-
-        # Dynamic panels are filled after the page ran (see app.py), so the log and
-        # cost meter reflect this run's guard decisions and calls, not the previous run's.
+        # Filled after the page ran (see app.py) so cost and log reflect this run.
         st.session_state.sidebar_dynamic = st.container()
+
+        if s.user_name or s.user_email:
+            initial = (s.user_name or s.user_email)[:1].upper()
+            st.html(
+                f'<div class="hoot-user"><div class="hoot-avatar">{initial}</div><div>'
+                f'<div class="n">{html.escape(s.user_name)}</div>'
+                f'<div class="e">{html.escape(s.user_email)}</div></div></div>'
+            )
 
 
 def render_sidebar_dynamic() -> None:
     with st.session_state.sidebar_dynamic:
-        render_cost_meter()
+        render_cost_card()
         render_security_log()
 
 
-def render_cost_meter() -> None:
+def render_cost_card() -> None:
     t = state.tracker()
     limit = state.settings().max_session_cost_usd
-    st.markdown("### 💸 Session usage")
-    c1, c2 = st.columns(2)
-    c1.metric("Cost (USD)", f"{t.total_cost_usd:.4f}")
-    c2.metric("Tokens", f"{t.total_tokens:,}")
-    st.caption(f"{len(t.calls)} calls · soft limit ${limit:.2f}")
-    if t.total_cost_usd > limit:
-        st.warning("Session cost is above the soft limit.")
+    over = t.total_cost_usd > limit
+    st.html(
+        '<div class="hoot-usage"><div class="row"><div><div class="label">Session cost</div>'
+        f'<div class="big">${t.total_cost_usd:.3f}</div></div><div><div class="label">Tokens</div>'
+        f'<div class="big">{t.total_tokens:,}</div></div></div>'
+        f'<div class="small">{len(t.calls)} calls · soft limit ${limit:.2f}'
+        f"{' · ⚠️ over limit' if over else ''}</div></div>"
+    )
 
 
 def render_security_log() -> None:
     log = state.security_log()
     counts = log.counts
-    title = (
-        f"🛡️ Security log · {counts.get('block', 0)} blocked · "
-        f"{counts.get('redact', 0)} redacted · {counts.get('allow', 0)} allowed"
-    )
     if failed := log.fail_open_entries:
         st.warning(
             f"LLM guard unavailable ({len(failed)}×): {failed[-1].reason.split(': ', 1)[-1]}. "
             "Inputs were allowed by the rule-based guard only."
         )
+    title = f"🛡️ Security log · {counts.get('block', 0)} blocked"
     with st.expander(title, expanded=False):
         if not log.entries:
             st.caption("No guard decisions yet.")
         for e in reversed(log.entries[-30:]):
             icon = {"allow": "✅", "redact": "✂️", "block": "⛔"}[e.action]
-            detail = f" `{', '.join(e.matches)}`" if e.matches else ""
-            st.markdown(
-                f"{icon} **{e.layer}** · {e.kind} · {e.category}{detail}  \n"
-                f"<small>{e.time:%H:%M:%S} — {e.reason}</small>",
-                unsafe_allow_html=True,
+            detail = f" · <code>{html.escape(', '.join(e.matches))}</code>" if e.matches else ""
+            st.html(
+                f'<div class="hoot-log">{icon} <b>{e.layer}</b> · {e.kind} · {e.category}{detail}'
+                f"<br><small>{e.time:%H:%M:%S} — {html.escape(e.reason)}</small></div>"
             )
 
 
@@ -107,6 +141,8 @@ def show_guard_block(err: GuardBlocked) -> None:
     d = err.decision
     st.error(f"🛡️ Request blocked by the {d.layer} guard ({d.category}): {d.reason}")
 
+
+# ---------- content cards ----------
 
 _TYPE_ICON = {
     "technical": "🔧",
@@ -116,12 +152,21 @@ _TYPE_ICON = {
 }
 
 
-def render_question_card(q: Question, *, show_details: bool = False) -> None:
-    with st.container(border=True):
-        st.caption(
-            f"{_TYPE_ICON.get(q.type.value, '')} {q.type.value.replace('_', ' ')} · {q.topic}"
+def section_header(title_html: str, subtitle: str = "") -> None:
+    sub = f"<p>{html.escape(subtitle)}</p>" if subtitle else ""
+    st.html(f'<div class="hoot-section"><h2>{title_html}</h2>{sub}</div>')
+
+
+def render_question_card(
+    q: Question, *, show_details: bool = False, key: str | None = None
+) -> None:
+    container = st.container(key=key) if key else st.container(border=True)
+    with container:
+        st.html(
+            f'<div class="hoot-kicker">{_TYPE_ICON.get(q.type.value, "")} '
+            f"{q.type.value.replace('_', ' ')} · {html.escape(q.topic)}</div>"
+            f"<h3>{html.escape(q.question)}</h3>"
         )
-        st.markdown(f"### {q.question}")
         if show_details:
             with st.expander("What a strong answer covers · hints"):
                 st.markdown("\n".join(f"- {p}" for p in q.strong_answer_covers))

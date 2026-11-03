@@ -1,4 +1,4 @@
-# Interview Practice App
+# Hoot · AI Interview Prep
 
 AI interview coach for technical roles. Two features, one dashboard, every prompt routed
 through a **security guard** to the **OpenRouter** API.
@@ -9,7 +9,7 @@ through a **security guard** to the **OpenRouter** API.
 
 | Feature | Status |
 |---|---|
-| Dashboard with role presets + custom job title | ✅ day 1 |
+| Dashboard: hero, role cards with search, recent sessions, guard playground | ✅ day 1–2 |
 | Security guard (rules + LLM classifier + output guard) with live log | ✅ day 1 |
 | Cost / token meter per session | ✅ day 1 |
 | Practice session: generated or JD-based questions, guided or mock mode, structured feedback, summary, retry weak ones, local history | ✅ day 2 |
@@ -48,7 +48,12 @@ Streamlit pages ──► features ──► GuardPipeline ──► OpenRouter 
 - `src/interview_app/models.py` — pydantic schemas for every structured call.
 - `src/interview_app/features/` — `jd_analyzer.py` and `practice.py` (session state machine + LLM operations).
 - `src/interview_app/storage/history.py` — finished sessions saved as JSON in `data/sessions/`.
-- `src/interview_app/ui/` — Streamlit pages and shared components.
+- `src/interview_app/ui/` — Streamlit pages and shared components. `theme.py` holds the brand (owl
+  mascot as inline SVG), the colour tokens and the CSS that styles keyed containers
+  (`st.container(key=...)` → `.st-key-...`); `.streamlit/config.toml` carries the native theme
+  (Tailwind palette "violet-amber": zinc neutrals, violet→pink hero, amber-500 accent; Plus Jakarta Sans; 12px radius).
+  Palettes are dictionaries in `theme.py` (`PALETTES`, `ACTIVE_PALETTE`); the sidebar brand is pinned with
+  `position: sticky` on Streamlit's layout wrapper while the rest of the sidebar scrolls.
 
 ### Models (via OpenRouter)
 

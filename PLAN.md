@@ -115,6 +115,15 @@ Comparison mechanics:
 Use case that actually helps interviews: a **personal knowledge base** — your CV, project notes (Doratics, Wittypen, Expondo), past answers and saved JD analyses. The coach then asks "tell me about X" questions grounded in your real experience and feedback can say "you did this at Doratics, mention it".
 Design slot (no code in Sprint 1): `storage/vector_store.py` (local, e.g. `chromadb` or sqlite + numpy), `rag/ingest.py` (chunk markdown/PDF → embeddings via OpenRouter), `rag/retrieve.py` (top-k context injected into the practice and feedback prompts). Embedding model selectable; default `qwen/qwen3-embedding-8b`.
 
+## 3d. Visual design (added 2026-11-03)
+Reference: Huru-style dashboard. Own brand: **Hoot**, an owl mascot with coral glasses (inline SVG,
+`ui/theme.py`). Palette = Tailwind tokens, three options defined in `PALETTES` (violet-amber chosen by Sonali;
+indigo-coral and teal-rose as alternatives, previewed at https://claude.ai/artifact/5EMQkvfcES1pPdjc3MYRWZ).
+Font: Plus Jakarta Sans (Google Fonts woff2 via `[[theme.fontFaces]]`). Sidebar: brand pinned (sticky),
+rest scrolls; 12px radius.
+Implementation: native Streamlit theme in `.streamlit/config.toml` + CSS targeting keyed containers;
+own sidebar menu (`st.navigation(position="hidden")` + `st.page_link`), hero and role grid on the dashboard.
+
 ## 4. Suggestions beyond the brief (recommended, small cost)
 1. Guided vs Mock mode (F1) — mock mode is what real interviews feel like.
 2. JD → Practice handoff — makes the two features one product.

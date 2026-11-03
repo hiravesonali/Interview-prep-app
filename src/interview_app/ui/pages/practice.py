@@ -19,12 +19,13 @@ from interview_app.ui import state
 from interview_app.ui.components import (
     render_feedback,
     render_question_card,
+    section_header,
     show_guard_block,
 )
 
 
 def render() -> None:
-    st.title("🗣️ Practice session")
+    section_header("Practice <span>session</span>")
     session: PracticeSession | None = st.session_state.get("practice")
     if session is None:
         _setup()
@@ -131,7 +132,7 @@ def _question_loop(session: PracticeSession) -> None:
         text=f"Question {session.index + 1} of {session.total} · {session.role} · "
         f"{session.mode} mode",
     )
-    render_question_card(q)
+    render_question_card(q, key="question_card")
 
     if session.mode == "guided":
         _guided_help(session)
