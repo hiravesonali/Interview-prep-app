@@ -13,6 +13,7 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 from interview_app.guard import GuardPipeline, InputKind
+from interview_app.llm.client import StructuredResult
 from interview_app.llm.prompts import render_prompt
 from interview_app.models import AnswerFeedback, Difficulty, Question, QuestionSet, QuestionType
 
@@ -184,7 +185,7 @@ Points a strong answer covers: {covers}
 </candidate_answer>"""
 
 
-def evaluate_answer(
+def evaluate_answer_detailed(
     pipe: GuardPipeline,
     role: str,
     question: Question,
@@ -192,7 +193,8 @@ def evaluate_answer(
     *,
     technique: str = "feedback/01_zero_shot",
     model: str | None = None,
-) -> AnswerFeedback:
+) -> StructuredResult[AnswerFeedback]:
+    """Like evaluate_answer but also returns raw output and usage (used by the Prompt Lab)."""
     template = (
         _FEEDBACK_TEMPLATE.replace("{type}", question.type.value)
         .replace("{topic}", question.topic)
@@ -208,4 +210,18 @@ def evaluate_answer(
         model=model,
         purpose=f"feedback:{technique.rsplit('/', 1)[-1]}",
     )
-    return result.data
+    return result
+
+
+def evaluate_answer(
+    pipe: GuardPipeline,
+    role: str,
+    question: Question,
+    answer: str,
+    *,
+    technique: str = "feedback/01_zero_shot",
+    model: str | None = None,
+) -> AnswerFeedback:
+    return evaluate_answer_detailed(
+        pipe, role, question, answer, technique=technique, model=model
+    ).data

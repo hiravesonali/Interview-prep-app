@@ -80,6 +80,10 @@ class StructuredOutputError(RuntimeError):
 _FENCE_RE = re.compile(r"^```(?:json)?\s*|\s*```$", re.MULTILINE)
 
 
+def _ascii(value: str) -> str:
+    return value.encode("ascii", "ignore").decode("ascii").strip()
+
+
 def _strip_fences(text: str) -> str:
     return _FENCE_RE.sub("", text.strip()).strip()
 
@@ -109,8 +113,9 @@ class OpenRouterClient:
             api_key=settings.openrouter_api_key.get_secret_value() or "missing",
             default_headers={
                 # Optional OpenRouter attribution headers (show up in their dashboard).
-                "HTTP-Referer": settings.app_url,
-                "X-Title": settings.app_title,
+                # HTTP headers must be ASCII: a stray en dash here breaks every request.
+                "HTTP-Referer": _ascii(settings.app_url),
+                "X-Title": _ascii(settings.app_title),
             },
             timeout=90,
             max_retries=2,
@@ -182,6 +187,10 @@ class OpenRouterClient:
                 raise StructuredOutputError(
                     f"Response truncated at max_tokens={max_tokens}; raise the limit."
                 )
+            if choice.finish_reason == "content_filter":
+                # Provider-side refusal (e.g. Anthropic's filter); retrying won't help.
+                refusal = getattr(choice.message, "refusal", None) or "no details"
+                raise StructuredOutputError(f"Refused by the provider's content filter: {refusal}")
             try:
                 data = schema.model_validate_json(raw)
                 return StructuredResult(data=data, raw=raw, usage=usage)

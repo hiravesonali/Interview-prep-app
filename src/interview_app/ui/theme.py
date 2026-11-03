@@ -281,6 +281,10 @@ h1, h2, h3 { letter-spacing: -0.3px; }
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; margin-bottom: 6px; }
 [class*="st-key-role_card_"] .stButton button { border-radius: 12px; font-weight: 700; }
 
+/* ---------- prompt lab ---------- */
+.st-key-lab_input { background: var(--surface); border: 1px solid var(--border); border-radius: 22px; padding: 18px 22px; margin-bottom: 10px; }
+[class*="st-key-lab_card_"] { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 12px 14px; height: 100%; }
+
 /* ---------- generic cards ---------- */
 .st-key-question_card { background: var(--section); border-radius: 22px; padding: 22px 26px; }
 .st-key-question_card h3 { margin: 4px 0 0; font-size: 22px; line-height: 1.35; }

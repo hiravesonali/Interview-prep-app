@@ -1,6 +1,6 @@
 # Interview Practice App — Architecture & Delivery Plan
 
-Status: APPROVED 2026-11-03. Day 1 (scaffold, client, guard, dashboard) and Day 2 (JD analyzer, practice loop, history) delivered.
+Status: APPROVED 2026-11-03. Day 1 (scaffold, client, guard, dashboard), Day 2 (JD analyzer, practice loop, history), UI redesign and Prompt Lab (5 feedback prompt variants, parallel comparison, ratings, leaderboard) delivered.
 Note: guard model changed to Haiku 4.5 because the course API key's OpenRouter guardrail allowlist blocks Haiku 5.5.
 Changes in v2: main model = Sonnet 5.5; prompt-technique lab (course requirement); RAG phase 2 with embedding model options.
 

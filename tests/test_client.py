@@ -16,9 +16,10 @@ class Verdict(BaseModel):
     note: str
 
 
-def _response(content: str, cost: float = 0.001, finish_reason: str = "stop"):
+def _response(content: str, cost: float = 0.001, finish_reason: str = "stop", refusal=None):
     usage = SimpleNamespace(prompt_tokens=10, completion_tokens=5, cost=cost, model_extra={})
-    choice = SimpleNamespace(message=SimpleNamespace(content=content), finish_reason=finish_reason)
+    message = SimpleNamespace(content=content, refusal=refusal)
+    choice = SimpleNamespace(message=message, finish_reason=finish_reason)
     return SimpleNamespace(choices=[choice], usage=usage)
 
 
@@ -77,4 +78,24 @@ def test_structured_truncation_fails_fast(monkeypatch, client):
     monkeypatch.setattr(client._client.chat.completions, "create", fake_create)
     with pytest.raises(StructuredOutputError, match="truncated"):
         client.chat_structured([{"role": "user", "content": "q"}], Verdict, max_tokens=50)
+    assert len(calls) == 1
+
+
+def test_headers_are_ascii_even_with_fancy_title():
+    c = OpenRouterClient(Settings(openrouter_api_key="t", app_title="Hoot \u2013 AI Prep"))
+    title = c._client.default_headers["X-Title"]
+    title.encode("ascii")  # must not raise
+    assert title == "Hoot  AI Prep"
+
+
+def test_structured_content_filter_fails_fast(monkeypatch, client):
+    calls = []
+
+    def fake_create(**kwargs):
+        calls.append(kwargs)
+        return _response("", finish_reason="content_filter", refusal="blocked by policy")
+
+    monkeypatch.setattr(client._client.chat.completions, "create", fake_create)
+    with pytest.raises(StructuredOutputError, match="content filter.*blocked by policy"):
+        client.chat_structured([{"role": "user", "content": "q"}], Verdict)
     assert len(calls) == 1
