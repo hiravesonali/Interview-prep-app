@@ -1,0 +1,27 @@
+# Role presets shown as chips on the dashboard. Edit freely.
+# topics seed the question generator; keep them short.
+roles:
+  - name: Full-stack Developer
+    icon: "🧩"
+    topics: [REST/GraphQL APIs, React or Vue state, SQL and data modelling, auth and sessions, caching, testing strategy, CI/CD, system design basics]
+  - name: Frontend Developer
+    icon: "🎨"
+    topics: [component architecture, state management, rendering performance, accessibility, CSS layout, TypeScript types, testing UI, SSR vs CSR]
+  - name: Backend Developer
+    icon: "⚙️"
+    topics: [API design, database indexing and transactions, concurrency, message queues, caching, observability, security basics, scalability]
+  - name: AI Engineer
+    icon: "🤖"
+    topics: [LLM APIs and tokens/cost, prompt engineering, structured outputs, RAG and embeddings, evals, tool calling, guardrails, latency and cost trade-offs]
+  - name: AI Agent Developer
+    icon: "🕹️"
+    topics: [agent loops and tool calling, planning and memory, human-in-the-loop, MCP, multi-agent orchestration, failure handling and retries, observability, evals]
+  - name: Product Engineer
+    icon: "🚀"
+    topics: [shipping end to end, product metrics, experimentation, trade-offs and scope, user research signals, technical debt, cross-functional work, ownership]
+  - name: Data Engineer
+    icon: "🗄️"
+    topics: [ETL/ELT pipelines, data modelling, SQL optimisation, batch vs streaming, orchestration, data quality, warehouses, schema evolution]
+  - name: Platform / DevOps Engineer
+    icon: "☁️"
+    topics: [containers and Kubernetes, CI/CD, infrastructure as code, monitoring and alerting, incident response, cloud networking, cost optimisation, security]
