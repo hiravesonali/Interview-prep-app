@@ -6,7 +6,22 @@ import streamlit as st
 
 from interview_app.config import AVAILABLE_MODELS
 from interview_app.guard import GuardBlocked
+from interview_app.llm.prompts import list_prompts
+from interview_app.models import AnswerFeedback, Question
 from interview_app.ui import state
+
+_TECHNIQUE_LABELS = {
+    "01_zero_shot": "Zero-shot",
+    "02_few_shot": "Few-shot",
+    "03_chain_of_thought": "Chain-of-thought",
+    "04_role_rubric": "Role + rubric",
+    "05_self_critique": "Self-critique",
+}
+
+
+def technique_label(name: str) -> str:
+    stem = name.rsplit("/", 1)[-1]
+    return _TECHNIQUE_LABELS.get(stem, stem)
 
 
 def render_sidebar_controls() -> None:
@@ -29,6 +44,15 @@ def render_sidebar_controls() -> None:
             "LLM guard (classifier)",
             value=pipe.llm_guard_enabled,
             help=f"Runs every input through {s.guard_model} after the rule-based guard.",
+        )
+
+        techniques = list_prompts("feedback")
+        st.session_state.feedback_technique = st.selectbox(
+            "Feedback prompt technique",
+            techniques,
+            index=techniques.index(st.session_state.get("feedback_technique", techniques[0])),
+            format_func=technique_label,
+            help="Which of the system-prompt variants scores your answers (see Prompt Lab).",
         )
 
         # Dynamic panels are filled after the page ran (see app.py), so the log and
@@ -61,6 +85,11 @@ def render_security_log() -> None:
         f"🛡️ Security log · {counts.get('block', 0)} blocked · "
         f"{counts.get('redact', 0)} redacted · {counts.get('allow', 0)} allowed"
     )
+    if failed := log.fail_open_entries:
+        st.warning(
+            f"LLM guard unavailable ({len(failed)}×): {failed[-1].reason.split(': ', 1)[-1]}. "
+            "Inputs were allowed by the rule-based guard only."
+        )
     with st.expander(title, expanded=False):
         if not log.entries:
             st.caption("No guard decisions yet.")
@@ -77,3 +106,41 @@ def render_security_log() -> None:
 def show_guard_block(err: GuardBlocked) -> None:
     d = err.decision
     st.error(f"🛡️ Request blocked by the {d.layer} guard ({d.category}): {d.reason}")
+
+
+_TYPE_ICON = {
+    "technical": "🔧",
+    "system_design": "🏗️",
+    "behavioural": "🤝",
+    "role_specific": "🎯",
+}
+
+
+def render_question_card(q: Question, *, show_details: bool = False) -> None:
+    with st.container(border=True):
+        st.caption(
+            f"{_TYPE_ICON.get(q.type.value, '')} {q.type.value.replace('_', ' ')} · {q.topic}"
+        )
+        st.markdown(f"### {q.question}")
+        if show_details:
+            with st.expander("What a strong answer covers · hints"):
+                st.markdown("\n".join(f"- {p}" for p in q.strong_answer_covers))
+                for i, h in enumerate(q.hints, 1):
+                    st.markdown(f"💡 **Hint {i}:** {h}")
+
+
+def render_feedback(fb: AnswerFeedback) -> None:
+    with st.container(border=True):
+        cols = st.columns(5)
+        cols[0].metric("Overall", f"{fb.overall} / 5")
+        for col, s in zip(cols[1:], fb.scores, strict=False):
+            col.metric(s.dimension.capitalize(), s.score, help=s.comment)
+        c1, c2 = st.columns(2)
+        c1.markdown("**✅ Strengths**\n" + "\n".join(f"- {x}" for x in fb.strengths))
+        c2.markdown("**🔍 Gaps**\n" + "\n".join(f"- {x}" for x in fb.gaps))
+        if fb.analysis:
+            with st.expander("Model's reasoning"):
+                st.write(fb.analysis)
+        with st.expander("Model answer"):
+            st.write(fb.model_answer)
+        st.markdown(f"**Likely follow-up:** {fb.follow_up_question}")

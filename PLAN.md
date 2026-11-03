@@ -1,6 +1,7 @@
 # Interview Practice App — Architecture & Delivery Plan
 
-Status: APPROVED 2026-11-03. Day 1 (scaffold, client, guard, dashboard) delivered.
+Status: APPROVED 2026-11-03. Day 1 (scaffold, client, guard, dashboard) and Day 2 (JD analyzer, practice loop, history) delivered.
+Note: guard model changed to Haiku 4.5 because the course API key's OpenRouter guardrail allowlist blocks Haiku 5.5.
 Changes in v2: main model = Sonnet 5.5; prompt-technique lab (course requirement); RAG phase 2 with embedding model options.
 
 ## 1. Goal
@@ -85,7 +86,7 @@ Interview-practice-app/
 |---|---|---|
 | OpenRouter client | `openai` SDK with `base_url=https://openrouter.ai/api/v1` | standard, supports structured outputs + streaming, easy to swap models |
 | Main model | `anthropic/claude-sonnet-5.5` ($2 in / $10 out per 1M) — decided | higher capability for coaching, feedback and JD analysis; supports structured outputs + streaming |
-| Guard classifier model | `anthropic/claude-haiku-5.5` ($0.10 / $0.50 per 1M) | the guard runs on every call; a 20x cheaper model keeps the guard nearly free. Configurable via `GUARD_MODEL` |
+| Guard classifier model | `anthropic/claude-haiku-4.5` ($1 / $5 per 1M) | Haiku 5.5 is blocked by the key's model allowlist; 4.5 is the cheapest allowed Anthropic model. Configurable via `GUARD_MODEL` |
 | Embeddings (phase 2 RAG) | `qwen/qwen3-embedding-8b` default; `openai/text-embedding-3-small` / `-large` selectable | course-provided options; all via OpenRouter `/embeddings` so one API key |
 | Cost control | per-call usage logged, session cost meter, `MAX_SESSION_COST` soft limit warning | Sonnet is ~20x Haiku; a 10-question guided session ≈ 40-60k tokens ≈ $0.30-0.60 |
 | Structured outputs | pydantic v2 → json_schema | reliable rendering, testable, course topic |

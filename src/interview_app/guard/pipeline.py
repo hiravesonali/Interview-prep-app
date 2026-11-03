@@ -71,12 +71,18 @@ class GuardPipeline:
     # ----- guarded calls -----
 
     def _build_messages(
-        self, system_prompt: str, user_text: str, history: list[Message] | None
+        self,
+        system_prompt: str,
+        user_text: str,
+        history: list[Message] | None,
+        user_template: str = "{input}",
     ) -> list[Message]:
+        """`user_template` is app-authored context (e.g. the question) wrapped around the
+        guard-checked user text; only `{input}` is replaced, so braces elsewhere are safe."""
         return [
             {"role": "system", "content": system_prompt},
             *(history or []),
-            {"role": "user", "content": user_text},
+            {"role": "user", "content": user_template.replace("{input}", user_text)},
         ]
 
     def chat(
@@ -86,6 +92,7 @@ class GuardPipeline:
         kind: InputKind,
         *,
         history: list[Message] | None = None,
+        user_template: str = "{input}",
         model: str | None = None,
         temperature: float = 0.4,
         purpose: str = "chat",
@@ -93,7 +100,7 @@ class GuardPipeline:
         safe = self.check_input(user_text, kind)
         try:
             result = self.client.chat(
-                self._build_messages(system_prompt, safe.text, history),
+                self._build_messages(system_prompt, safe.text, history, user_template),
                 model=model,
                 temperature=temperature,
                 purpose=purpose,
@@ -111,17 +118,20 @@ class GuardPipeline:
         schema: type[T],
         *,
         history: list[Message] | None = None,
+        user_template: str = "{input}",
         model: str | None = None,
         temperature: float = 0.2,
+        max_tokens: int = 4000,
         purpose: str = "structured",
     ) -> StructuredResult[T]:
         safe = self.check_input(user_text, kind)
         try:
             result = self.client.chat_structured(
-                self._build_messages(system_prompt, safe.text, history),
+                self._build_messages(system_prompt, safe.text, history, user_template),
                 schema,
                 model=model,
                 temperature=temperature,
+                max_tokens=max_tokens,
                 purpose=purpose,
             )
         except PermissionDeniedError as err:
@@ -136,6 +146,7 @@ class GuardPipeline:
         kind: InputKind,
         *,
         history: list[Message] | None = None,
+        user_template: str = "{input}",
         model: str | None = None,
         temperature: float = 0.5,
         purpose: str = "stream",
@@ -149,7 +160,7 @@ class GuardPipeline:
         chunks: list[str] = []
         try:
             for delta in self.client.stream(
-                self._build_messages(system_prompt, safe.text, history),
+                self._build_messages(system_prompt, safe.text, history, user_template),
                 model=model,
                 temperature=temperature,
                 purpose=purpose,

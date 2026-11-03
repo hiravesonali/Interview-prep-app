@@ -25,3 +25,11 @@ def list_prompts(subfolder: str) -> list[str]:
     """Names of all prompt files in a subfolder, sorted (used by the Prompt Lab)."""
     folder = PROMPTS_DIR / subfolder
     return sorted(f"{subfolder}/{p.stem}" for p in folder.glob("*.md"))
+
+
+def render_prompt(name: str, **vars: str) -> str:
+    """Load a prompt and substitute `{{key}}` placeholders (JSON braces stay untouched)."""
+    text = load_prompt(name)
+    for key, value in vars.items():
+        text = text.replace("{{" + key + "}}", str(value))
+    return text

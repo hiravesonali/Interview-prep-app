@@ -175,7 +175,13 @@ class OpenRouterClient:
                 resp, model, time.perf_counter() - t0, f"{purpose}:try{attempt + 1}"
             )
             self.tracker.add(usage)
-            raw = _strip_fences(resp.choices[0].message.content or "")
+            choice = resp.choices[0]
+            raw = _strip_fences(choice.message.content or "")
+            if choice.finish_reason == "length":
+                # A repair turn cannot fix a cut-off response; fail fast instead.
+                raise StructuredOutputError(
+                    f"Response truncated at max_tokens={max_tokens}; raise the limit."
+                )
             try:
                 data = schema.model_validate_json(raw)
                 return StructuredResult(data=data, raw=raw, usage=usage)

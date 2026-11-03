@@ -40,3 +40,8 @@ class SecurityLog:
     @property
     def counts(self) -> Counter[str]:
         return Counter(e.action for e in self.entries)
+
+    @property
+    def fail_open_entries(self) -> list[LogEntry]:
+        """Decisions where the LLM guard errored and let the input through."""
+        return [e for e in self.entries if e.layer == "input_llm" and "fail-open" in e.reason]

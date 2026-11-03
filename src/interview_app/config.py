@@ -15,7 +15,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 # Models offered in the sidebar selector. The first entry is the default.
 AVAILABLE_MODELS: tuple[str, ...] = (
     "anthropic/claude-sonnet-5.5",
-    "anthropic/claude-haiku-5.5",
+    "anthropic/claude-haiku-4.5",
     "openai/gpt-5-mini",
 )
 
@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     openrouter_base_url: str = "https://openrouter.ai/api/v1"
 
     default_model: str = AVAILABLE_MODELS[0]
-    guard_model: str = "anthropic/claude-haiku-5.5"
+    guard_model: str = "anthropic/claude-haiku-4.5"
 
     llm_guard_enabled: bool = True
     guard_fail_closed: bool = False

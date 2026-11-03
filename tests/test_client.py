@@ -16,11 +16,10 @@ class Verdict(BaseModel):
     note: str
 
 
-def _response(content: str, cost: float = 0.001):
+def _response(content: str, cost: float = 0.001, finish_reason: str = "stop"):
     usage = SimpleNamespace(prompt_tokens=10, completion_tokens=5, cost=cost, model_extra={})
-    return SimpleNamespace(
-        choices=[SimpleNamespace(message=SimpleNamespace(content=content))], usage=usage
-    )
+    choice = SimpleNamespace(message=SimpleNamespace(content=content), finish_reason=finish_reason)
+    return SimpleNamespace(choices=[choice], usage=usage)
 
 
 @pytest.fixture
@@ -66,3 +65,16 @@ def test_structured_gives_up_after_retry(monkeypatch, client):
     _install(monkeypatch, client, ["nope", "still nope"])
     with pytest.raises(StructuredOutputError):
         client.chat_structured([{"role": "user", "content": "q"}], Verdict)
+
+
+def test_structured_truncation_fails_fast(monkeypatch, client):
+    calls = []
+
+    def fake_create(**kwargs):
+        calls.append(kwargs)
+        return _response('{"ok": true, "no', finish_reason="length")
+
+    monkeypatch.setattr(client._client.chat.completions, "create", fake_create)
+    with pytest.raises(StructuredOutputError, match="truncated"):
+        client.chat_structured([{"role": "user", "content": "q"}], Verdict, max_tokens=50)
+    assert len(calls) == 1

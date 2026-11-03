@@ -6,6 +6,7 @@ import streamlit as st
 
 from interview_app.guard import GuardBlocked, InputKind
 from interview_app.roles import load_roles
+from interview_app.storage.history import list_sessions, load_session
 from interview_app.ui import state
 from interview_app.ui.components import show_guard_block
 
@@ -70,7 +71,18 @@ def _feature_cards() -> None:
 
 def _recent_sessions() -> None:
     st.subheader("Recent sessions")
-    st.caption("Saved sessions will appear here once the practice feature lands.")
+    sessions = list_sessions(state.settings().data_dir, limit=8)
+    if not sessions:
+        st.caption("No saved sessions yet. Finish a practice session and it will show up here.")
+        return
+    for s in sessions:
+        c1, c2, c3, c4 = st.columns([3, 1, 1, 1])
+        c1.markdown(f"**{s.role}** · {s.mode} · {s.started_at:%d %b %Y %H:%M}")
+        c2.markdown(f"{s.answered}/{s.questions} answered")
+        c3.markdown(f"⭐ {s.overall_average:.1f}/5" if s.answered else "—")
+        if c4.button("Open", key=f"open-{s.path.name}"):
+            st.session_state.practice = load_session(s.path)
+            st.switch_page(st.session_state.pages["practice"])
 
 
 def _guard_playground() -> None:

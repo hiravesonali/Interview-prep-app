@@ -12,8 +12,8 @@ through a **security guard** to the **OpenRouter** API.
 | Dashboard with role presets + custom job title | ✅ day 1 |
 | Security guard (rules + LLM classifier + output guard) with live log | ✅ day 1 |
 | Cost / token meter per session | ✅ day 1 |
-| Practice session: 10 questions, guided or mock mode, structured feedback | day 2–3 |
-| Job-description analyzer: skills, likely questions, prep plan → practice | day 2–3 |
+| Practice session: generated or JD-based questions, guided or mock mode, structured feedback, summary, retry weak ones, local history | ✅ day 2 |
+| Job-description analyzer: skills, likely questions, prep plan → practice hand-off | ✅ day 2 |
 | Prompt Lab: 5 system-prompt techniques compared on the same answer | day 4 |
 
 ## Quick start
@@ -46,6 +46,8 @@ Streamlit pages ──► features ──► GuardPipeline ──► OpenRouter 
   schema + one repair retry), `stream`. Cost comes from OpenRouter's `usage.cost`.
 - `src/interview_app/llm/prompts/` — system prompts as Markdown files, loaded by name.
 - `src/interview_app/models.py` — pydantic schemas for every structured call.
+- `src/interview_app/features/` — `jd_analyzer.py` and `practice.py` (session state machine + LLM operations).
+- `src/interview_app/storage/history.py` — finished sessions saved as JSON in `data/sessions/`.
 - `src/interview_app/ui/` — Streamlit pages and shared components.
 
 ### Models (via OpenRouter)
@@ -53,7 +55,7 @@ Streamlit pages ──► features ──► GuardPipeline ──► OpenRouter 
 | Purpose | Model | Why |
 |---|---|---|
 | Coaching, feedback, JD analysis | `anthropic/claude-sonnet-5.5` | capability |
-| Guard classifier | `anthropic/claude-haiku-5.5` | runs on every request; ~20× cheaper |
+| Guard classifier | `anthropic/claude-haiku-4.5` | runs on every request; cheaper and fast. Haiku 5.5 would be cheaper still but is blocked by the workspace model allowlist on the course API key |
 
 Both are configurable in `.env`; the main model can be switched in the sidebar.
 
