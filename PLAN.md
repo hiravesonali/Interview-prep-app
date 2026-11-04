@@ -91,7 +91,7 @@ Interview-practice-app/
 | Embeddings (phase 2 RAG) | `qwen/qwen3-embedding-8b` default; `openai/text-embedding-3-small` / `-large` selectable | course-provided options; all via OpenRouter `/embeddings` so one API key |
 | Cost control | per-call usage logged, session cost meter, `MAX_SESSION_COST` soft limit warning | Sonnet is ~20x Haiku; a 10-question guided session ≈ 40-60k tokens ≈ $0.30-0.60 |
 | Structured outputs | pydantic v2 → json_schema | reliable rendering, testable, course topic |
-| State | `st.session_state` + JSON files | simple; SQLite later if needed |
+| State | `st.session_state` + JSON files (Sprint 1) → SQLAlchemy, SQLite local / Postgres prod (§9) | simple first; one code path when deployed |
 | Navigation | `st.navigation` multi-page | clean dashboard → feature routing |
 | Python | 3.12 via uv | stable for Streamlit 1.66 |
 
@@ -147,7 +147,7 @@ Later (not in Sprint 1): voice answers (OpenRouter STT), CV upload for skill-gap
 - Guard design: rule-based + Haiku classifier + OpenRouter native guardrails (403 → logged block). Approved.
 - Local JSON history on by default. Approved.
 - Embeddings: `qwen/qwen3-embedding-8b` default, OpenAI small/large selectable (phase 2).
-- RAG, LangChain, deployment: after Sprint 1.
+- RAG, LangChain, deployment: after Sprint 1 (deployment + database agreed 2026-11-04, see §9).
 - Working style: Claude scaffolds and documents decisions; Sonali writes/tunes the prompt variants herself.
 
 ## 7. Still open
@@ -167,3 +167,21 @@ added because they are explicitly listed optional tasks and cheap given the exis
 | 6 | Temperature experiment | Easy: "tune one model setting and compare" | Same script, `--temperature-sweep`: zero-shot at 0.2 and 1.0, twice each; score spread recorded in the README. |
 | 8 | Prompt Lab demoted to a developer tool | Medium: "keep the developer settings separate from the user experience" | The user menu shows Dashboard, Practice, JD analyzer. The Lab is linked from the Developer settings expander (under "Tools"); its technique picker and judge settings sit in an Options expander so the visible flow is pick input → run → rate → save. The Lab winner (role + rubric) is the default grader. |
 | 7 | Small fixes | — | README guard model name; mock-mode scoring errors are shown instead of swallowed; guided mode collects the optional note for the coach; sessions are saved after every answer so an abandoned session is resumable from the dashboard. |
+
+## 9. v4 — persistence and deployment (agreed 2026-11-04, first post-Sprint 1 work)
+
+Context: today finished sessions are JSON files in `data/sessions/`, Prompt Lab runs live in
+`data/prompt_lab.json`, and the cost meter and security log are in memory and reset on every
+browser refresh. All data is single-user and document-shaped (nested pydantic models, no joins).
+
+| Decision | Choice | Why | Rejected |
+|---|---|---|---|
+| Database | SQLAlchemy 2.0; `DATABASE_URL` selects the engine: `sqlite:///data/hoot.db` locally, hosted Postgres (Neon free tier) in production, in-memory SQLite in tests | one code path (12-factor, same convention as Node); no local setup; tests stay offline | JSON files on a persistent volume (no querying, ties us to a host with disks); local Postgres in Docker (slower dev loop for no gain); SQLModel (dual pydantic/SQLAlchemy models surprise on nested documents) |
+| Schema | "document with index": per table a few scalar columns for listing/filtering plus one JSON column holding the full pydantic dump. Tables: `sessions`, `prompt_lab_runs`, `security_events`, `usage_events`. Every table has `user_id` from day one | pydantic models stay the source of truth; table shape rarely changes, so no Alembic until the first real migration | ten normalized tables for data never queried by field |
+| New persisted data | `security_events` (audit trail of guard decisions) and `usage_events` (per-call cost → per-user **daily** spend cap enforced in the pipeline) | the per-browser-session cap resets on refresh; with a public URL that is a real hole | — |
+| Host | Streamlit Community Cloud (git-push deploy, secrets UI, free). Fly.io/Railway with a Dockerfile is the Phase 2 option if an always-on process, SQLite on a volume, or Docker experience is wanted | right size for a one-person app; the reviewer can open a link | Render free tier (spins down, ephemeral disk); HF Spaces (no persistent disk) |
+| Access | Private: Streamlit `st.login` (Google OIDC) + `ALLOWED_EMAILS` allowlist in secrets. `user_id` = the signed-in email; `"local"` when running without auth | the OpenRouter key lives in server secrets, so an open URL lets strangers spend it | public demo with only a cost cap |
+| Production safety | `APP_ENV=prod` forces the LLM guard to fail closed and requires auth | fail-open is right for local dev, wrong for a public app | — |
+
+Migration: a one-off script imports the existing `data/sessions/*.json` and `data/prompt_lab.json`
+into the database so the Sprint 1 history and the Prompt Lab results (a course deliverable) survive.

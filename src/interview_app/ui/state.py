@@ -7,6 +7,7 @@ import streamlit as st
 from interview_app.config import Settings, get_settings
 from interview_app.guard import GuardPipeline, SecurityLog
 from interview_app.llm.client import OpenRouterClient, UsageTracker
+from interview_app.storage.store import Store, open_store
 
 
 def init_state() -> None:
@@ -21,6 +22,7 @@ def init_state() -> None:
     st.session_state.security_log = log
     st.session_state.client = client
     st.session_state.pipeline = GuardPipeline(client, settings, log)
+    st.session_state.store = open_store(settings)
     st.session_state.model = settings.default_model
     st.session_state.selected_role = None
     st.session_state.custom_title = ""
@@ -37,6 +39,10 @@ def pipeline() -> GuardPipeline:
 
 def settings() -> Settings:
     return st.session_state.settings
+
+
+def store() -> Store:
+    return st.session_state.store
 
 
 def tracker() -> UsageTracker:

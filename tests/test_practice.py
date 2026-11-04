@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from pathlib import Path
-
 from interview_app.features.jd_analyzer import to_question_set
 from interview_app.features.practice import PracticeSession
 from interview_app.models import (
@@ -13,7 +11,8 @@ from interview_app.models import (
     QuestionSet,
     QuestionType,
 )
-from interview_app.storage.history import list_sessions, load_session, save_session
+from interview_app.storage.db import make_engine
+from interview_app.storage.store import Store
 
 
 def _q(i: int, topic: str = "t") -> Question:
@@ -81,18 +80,35 @@ def test_summary_and_retry_set() -> None:
     assert [q.topic for q in weak.questions] == ["t2", "t3"]
 
 
-def test_history_roundtrip(tmp_path: Path) -> None:
+def test_store_upserts_and_lists_sessions() -> None:
+    store = Store(make_engine("sqlite://"), "me")
     s = _session(2)
     s.answers = {1: "my answer"}
     s.feedback = {1: _fb(4)}
+    store.save_session(s)  # saved mid-session ...
     s.advance()
     s.advance()
-    path = save_session(s, tmp_path)
-    assert path.exists()
-    loaded = load_session(path)
+    store.save_session(s)  # ... and again when finished: same row, updated
+    loaded = store.load_session(s.id)
+    assert loaded.id == s.id and loaded.is_finished
     assert loaded.answers == {1: "my answer"} and loaded.feedback[1].overall == 4
-    summaries = list_sessions(tmp_path)
+    summaries = store.list_sessions()
     assert len(summaries) == 1 and summaries[0].overall_average == 4.0
+    assert summaries[0].id == s.id and summaries[0].answered == 1
+
+
+def test_store_scopes_sessions_to_the_user() -> None:
+    engine = make_engine("sqlite://")
+    Store(engine, "alice").save_session(_session(1))
+    bob = Store(engine, "bob")
+    assert bob.list_sessions() == []
+    alice_id = Store(engine, "alice").list_sessions()[0].id
+    try:
+        bob.load_session(alice_id)
+    except KeyError:
+        pass
+    else:
+        raise AssertionError("another user's session must not load")
 
 
 def test_jd_handoff_renumbers_questions() -> None:

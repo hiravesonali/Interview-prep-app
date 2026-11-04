@@ -3,11 +3,14 @@ from __future__ import annotations
 from pathlib import Path
 
 from interview_app.features import prompt_lab as lab
+from interview_app.features.practice import PracticeSession
 from interview_app.features.prompt_lab import SAMPLE_QUESTION, run_comparison
 from interview_app.llm.client import StructuredOutputError, StructuredResult, Usage
 from interview_app.llm.prompts import list_prompts, render_prompt
-from interview_app.models import AnswerFeedback, DimensionScore
-from interview_app.storage.prompt_lab import LabRecord, append_records, leaderboard, load_records
+from interview_app.models import AnswerFeedback, Difficulty, DimensionScore, QuestionSet
+from interview_app.storage.db import make_engine
+from interview_app.storage.prompt_lab import LabRecord, leaderboard
+from interview_app.storage.store import Store
 
 
 def _fb(overall: int) -> AnswerFeedback:
@@ -47,18 +50,19 @@ def test_run_comparison_collects_results_and_errors(monkeypatch) -> None:
     assert len(failed) == 1 and "invalid output" in failed[0].error
 
 
-def test_store_roundtrip_and_leaderboard(tmp_path: Path) -> None:
+def test_store_roundtrip_and_leaderboard() -> None:
     def rec(t, rating, cost):
         return LabRecord("2026-11-03T10:00:00", t, "m", "q", "a", 4, cost, 2.0, 100, rating)  # noqa: E731
 
-    append_records(
-        [rec("feedback/01_zero_shot", 3, 0.01), rec("feedback/02_few_shot", 5, 0.02)], tmp_path
+    store = Store(make_engine("sqlite://"))
+    store.append_lab_records(
+        [rec("feedback/01_zero_shot", 3, 0.01), rec("feedback/02_few_shot", 5, 0.02)]
     )
-    append_records(
-        [rec("feedback/01_zero_shot", 5, 0.03), rec("feedback/05_self_critique", None, 0.04)],
-        tmp_path,
+    store.append_lab_records(
+        [rec("feedback/01_zero_shot", 5, 0.03), rec("feedback/05_self_critique", None, 0.04)]
     )
-    records = load_records(tmp_path)
+    records = store.load_lab_records()
+    assert [r.cost_usd for r in records] == [0.01, 0.02, 0.03, 0.04]  # insertion order kept
     assert len(records) == 4
     rows = leaderboard(records)
     assert rows[0].technique == "feedback/02_few_shot" and rows[0].avg_rating == 5.0
@@ -123,22 +127,38 @@ def test_judge_prompt_renders_and_feedback_goes_in_template() -> None:
     assert '"overall": 3' in user  # the feedback JSON is embedded in the template
 
 
-def test_leaderboard_includes_judge_average(tmp_path: Path) -> None:
+def test_leaderboard_includes_judge_average() -> None:
     def rec(t, rating, judge):
         return LabRecord(
             "2026-11-03T10:00:00", t, "m", "q", "a", 4, 0.01, 2.0, 100, rating, "", judge, "j"
         )
 
-    append_records(
-        [rec("feedback/01_zero_shot", None, 3), rec("feedback/01_zero_shot", None, 5)], tmp_path
+    store = Store(make_engine("sqlite://"))
+    store.append_lab_records(
+        [rec("feedback/01_zero_shot", None, 3), rec("feedback/01_zero_shot", None, 5)]
     )
-    rows = leaderboard(load_records(tmp_path))
+    rows = leaderboard(store.load_lab_records())
     assert rows[0].avg_judge == 4.0 and rows[0].avg_rating is None
 
 
-def test_old_records_without_judge_fields_still_load(tmp_path: Path) -> None:
+def test_sprint1_json_files_import_idempotently(tmp_path: Path) -> None:
+    """Sprint 1 files (sessions + lab runs without judge fields) load; a rerun adds nothing."""
     import json
 
+    from interview_app.storage.import_json import import_all
+
+    (tmp_path / "sessions").mkdir()
+    session = PracticeSession(
+        role="AI Engineer",
+        mode="mock",
+        question_set=QuestionSet(
+            role="AI Engineer", difficulty=Difficulty.MID, questions=[SAMPLE_QUESTION]
+        ),
+        feedback_technique="feedback/04_role_rubric",
+    )
+    raw = session.model_dump(mode="json")
+    del raw["id"]  # Sprint 1 files predate the id field
+    (tmp_path / "sessions" / "20261103-150721-ai-engineer.json").write_text(json.dumps(raw))
     (tmp_path / "prompt_lab.json").write_text(
         json.dumps(
             [
@@ -158,5 +178,12 @@ def test_old_records_without_judge_fields_still_load(tmp_path: Path) -> None:
             ]
         )
     )
-    records = load_records(tmp_path)
+    store = Store(make_engine("sqlite://"))
+    first = import_all(store, tmp_path)
+    assert (first.sessions, first.lab_records) == (1, 1)
+    records = store.load_lab_records()
     assert records[0].judge_overall is None and leaderboard(records)[0].avg_judge is None
+
+    again = import_all(store, tmp_path)
+    assert (again.sessions, again.lab_records, again.lab_records_skipped) == (1, 0, 1)
+    assert len(store.list_sessions()) == 1 and len(store.load_lab_records()) == 1

@@ -1,12 +1,10 @@
-"""Prompt Lab results store (data/prompt_lab.json): one record per technique run."""
+"""Prompt Lab records and leaderboard (storage is in `store.py`): one record per technique run."""
 
 from __future__ import annotations
 
-import json
 from collections import defaultdict
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from datetime import datetime
-from pathlib import Path
 
 
 @dataclass(frozen=True)
@@ -37,28 +35,6 @@ class LeaderboardRow:
     avg_cost_usd: float
     avg_latency_s: float
     avg_tokens: float
-
-
-def _path(data_dir: Path) -> Path:
-    data_dir.mkdir(parents=True, exist_ok=True)
-    return data_dir / "prompt_lab.json"
-
-
-def load_records(data_dir: Path) -> list[LabRecord]:
-    p = _path(data_dir)
-    if not p.exists():
-        return []
-    try:
-        return [LabRecord(**r) for r in json.loads(p.read_text(encoding="utf-8"))]
-    except (ValueError, TypeError):
-        return []
-
-
-def append_records(records: list[LabRecord], data_dir: Path) -> None:
-    existing = load_records(data_dir)
-    _path(data_dir).write_text(
-        json.dumps([asdict(r) for r in [*existing, *records]], indent=2), encoding="utf-8"
-    )
 
 
 def leaderboard(records: list[LabRecord]) -> list[LeaderboardRow]:

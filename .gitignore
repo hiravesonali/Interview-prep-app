@@ -13,3 +13,4 @@ wheels/
 .env
 data/sessions/
 data/prompt_lab.json
+data/*.db

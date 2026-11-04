@@ -5,7 +5,7 @@
     uv run python scripts/run_prompt_lab.py --temperature-sweep # zero-shot at T=0.2 / 1.0, x2 each
     uv run python scripts/run_prompt_lab.py --dry-run           # print the plan, call nothing
 
-Results are appended to data/prompt_lab.json (same store as the Lab page, so the leaderboard
+Results are appended to the database (same store as the Lab page, so the leaderboard
 shows them) and a Markdown table is printed for the README. Human ratings stay empty: those are
 added in the Lab UI.
 """
@@ -27,7 +27,8 @@ from interview_app.features.prompt_lab import (
 from interview_app.guard import GuardPipeline, SecurityLog
 from interview_app.llm.client import OpenRouterClient
 from interview_app.llm.prompts import list_prompts
-from interview_app.storage.prompt_lab import LabRecord, append_records, now_iso
+from interview_app.storage.prompt_lab import LabRecord, now_iso
+from interview_app.storage.store import open_store
 
 ROLE = "AI Engineer"
 
@@ -78,7 +79,7 @@ def comparison(pipe: GuardPipeline, model: str, judge_model: str | None) -> None
                     judge_model=r.judge_usage.model if r.judge_usage else "",
                 )
             )
-        append_records(records, pipe.settings.data_dir)
+        open_store(pipe.settings).append_lab_records(records)
 
     print("\n### Scores per sample answer (feedback's overall score / judge score)\n")
     levels = list(SAMPLE_ANSWERS)

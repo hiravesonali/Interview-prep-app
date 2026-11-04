@@ -16,7 +16,7 @@ rehearse them, not to produce more documents.
    was decided and why. If a decision is not recorded there, say so rather than inventing a
    rationale.
 2. `README.md`: Security design, Jailbreak experiment, Prompt engineering, Results, Tuning one
-   setting. Every number in an answer comes from here or from `data/prompt_lab.json`; never
+   setting. Every number in an answer comes from here or from the `prompt_lab_runs` table (`data/hoot.db`); never
    quote a figure from memory.
 3. `CLAUDE.md` Architecture paragraph for the mechanics (choke point, overrides, structured
    output repair retry, ASCII header incident).

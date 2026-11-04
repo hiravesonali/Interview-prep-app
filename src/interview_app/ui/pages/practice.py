@@ -14,7 +14,6 @@ from interview_app.guard import GuardBlocked
 from interview_app.llm.client import StructuredOutputError
 from interview_app.models import Difficulty, QuestionSet, QuestionType
 from interview_app.roles import find_role
-from interview_app.storage.history import save_session
 from interview_app.ui import state
 from interview_app.ui.components import (
     render_feedback,
@@ -156,7 +155,7 @@ def _question_loop(session: PracticeSession) -> None:
             if session.mode == "guided":
                 _evaluate(session, q.id)
             # Save after every answer so an abandoned session can be resumed from the dashboard.
-            save_session(session, state.settings().data_dir)
+            state.store().save_session(session)
             st.rerun()
 
     if answered and session.mode == "guided" and q.id in session.feedback:
@@ -170,14 +169,14 @@ def _question_loop(session: PracticeSession) -> None:
         if session.is_finished and session.mode == "mock":
             _evaluate_all(session)
         if session.is_finished:
-            save_session(session, state.settings().data_dir)
+            state.store().save_session(session)
         st.rerun()
     if c2.button("Skip this question"):
         session.advance()
         if session.is_finished:
             if session.mode == "mock":
                 _evaluate_all(session)
-            save_session(session, state.settings().data_dir)
+            state.store().save_session(session)
         st.rerun()
 
 

@@ -32,7 +32,7 @@ uv run python scripts/run_prompt_lab.py --temperature-sweep 2>&1 | tee <scratchp
 
 Options: `--model`, `--judge-model` (default: the first course model that is not the feedback
 model, so the judge is a different family), `--no-judge`. Each run appends to
-`data/prompt_lab.json`, which the Lab page's leaderboard reads, so the leaderboard accumulates
+the `prompt_lab_runs` table (SQLite at `data/hoot.db` locally), which the Lab page's leaderboard reads, so the leaderboard accumulates
 history; that is intended. Human ratings stay empty: Sonali adds those in the Lab UI.
 
 The script prints the per-answer score matrix, the averages table, and the total cost. If a

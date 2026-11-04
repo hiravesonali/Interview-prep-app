@@ -14,14 +14,7 @@ from interview_app.features.prompt_lab import (
 )
 from interview_app.llm.prompts import list_prompts
 from interview_app.models import Question, QuestionType
-from interview_app.storage.history import list_sessions, load_session
-from interview_app.storage.prompt_lab import (
-    LabRecord,
-    append_records,
-    leaderboard,
-    load_records,
-    now_iso,
-)
+from interview_app.storage.prompt_lab import LabRecord, leaderboard, now_iso
 from interview_app.ui import state
 from interview_app.ui.components import render_feedback, section_header, technique_label
 
@@ -61,10 +54,10 @@ def _pick_input() -> tuple[Question | None, str, str]:
             st.caption(SAMPLE_ANSWERS[level])
             return SAMPLE_QUESTION, SAMPLE_ANSWERS[level], role
         if source == "From a saved session":
-            sessions = list_sessions(state.settings().data_dir, limit=20)
+            sessions = state.store().list_sessions(limit=20)
             answered = []
             for s in sessions:
-                sess = load_session(s.path)
+                sess = state.store().load_session(s.id)
                 answered += [
                     (f"{sess.role} · {sess.started_at:%d %b %H:%M} · Q{q.id} {q.topic}", q, a)
                     for q in sess.questions
@@ -195,13 +188,13 @@ def _show_results(results: list[LabResult], question: Question | None, answer: s
             for r in results
             if r.ok and r.feedback is not None and r.usage is not None
         ]
-        append_records(records, state.settings().data_dir)
+        state.store().append_lab_records(records)
         st.toast(f"Saved {len(records)} records.")
         st.rerun()
 
 
 def _leaderboard() -> None:
-    records = load_records(state.settings().data_dir)
+    records = state.store().load_lab_records()
     st.html('<div class="hoot-h2">Leaderboard</div>')
     if not records:
         st.caption("Run a comparison and save it to start the leaderboard.")
@@ -224,4 +217,4 @@ def _leaderboard() -> None:
         hide_index=True,
         width="stretch",
     )
-    st.caption(f"{len(records)} saved runs · stored in data/prompt_lab.json")
+    st.caption(f"{len(records)} saved runs · stored in the database")

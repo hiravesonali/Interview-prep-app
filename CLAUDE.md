@@ -16,13 +16,13 @@ Three features, one dashboard, every LLM call routed through a security guard to
 - **Practice session**: generate ~10 questions for a role (or take them from a JD analysis), ask
   one at a time in guided mode (streamed coaching + hints) or mock mode, score each answer on
   four dimensions with structured feedback, end with a summary and a retry set. Sessions are
-  saved as JSON in `data/sessions/`.
+  saved to the database after every answer (see Storage below).
 - **JD analyzer**: paste a job description → skills, likely questions, day-by-day prep plan,
   then a hand-off button that pre-loads a practice session with the JD's questions.
 - **Prompt Lab** (developer tool, linked from the sidebar's Developer settings expander, not the
   main menu): the course requirement "5 system prompts with different techniques, compare
   them". Five feedback prompts (zero-shot, few-shot, chain-of-thought, role+rubric,
-  self-critique) run in parallel on the same answer; ratings go to `data/prompt_lab.json` and
+  self-critique) run in parallel on the same answer; ratings go to the `prompt_lab_runs` table and
   feed a leaderboard. The README **Results** section records the 2026-11-03 run (winner: role + rubric) and the
   temperature sweep; rerun the scripts and update it if the prompts change.
 
@@ -51,6 +51,7 @@ uv run ruff check . && uv run ruff format --check .
 uv run ruff format .                      # fix formatting
 uv run python scripts/run_prompt_lab.py --dry-run      # Prompt Lab from the CLI (drop --dry-run to spend ~$0.26)
 uv run python scripts/jailbreak_experiment.py [--live] # guard attack matrix → docs/jailbreak_experiment.xlsx
+uv run python scripts/import_json_data.py              # Sprint 1 JSON files → database (idempotent)
 ```
 
 Ruff: line length 100, rules E/F/I/UP/B/SIM; `ui/theme.py` is exempt from E501 (CSS/SVG strings).
@@ -114,6 +115,15 @@ so the owl mascot is emitted as a base64 data-URI `<img>`. The sidebar brand is 
 `position: sticky` on Streamlit's layout wrapper (`:has(> .st-key-brand)`); the collapse chevron
 is kept visible through a zero-height sticky header. These selectors depend on Streamlit 1.66
 internals, so verify in the browser after upgrading Streamlit.
+
+**Storage** (`storage/`): SQLAlchemy 2.x, `DATABASE_URL` selects the engine (`sqlite:///data/hoot.db`
+locally, `postgresql+psycopg://…` in production, `sqlite://` in tests). Tables are "document with
+index": a few scalar columns for listing plus a JSON `payload` holding the full pydantic dump, and
+every row has a `user_id` (`LOCAL_USER = "local"` until sign-in lands). `Store` (from
+`ui.state.store()` in pages, `open_store(settings)` in scripts) is the only module that touches
+SQLAlchemy; `PracticeSession.id` is the upsert key, so saving after every answer updates one row.
+`make_engine` creates missing tables (no Alembic yet). `scripts/import_json_data.py` imports the
+Sprint 1 JSON files idempotently. PLAN.md §9 records the persistence and deployment decisions.
 
 **Tests** never hit the network: subclass `OpenRouterClient` with a fake `chat`/`chat_structured`
 (see `tests/test_pipeline.py`) and build `GuardPipeline(..., llm_guard_enabled=False)`.

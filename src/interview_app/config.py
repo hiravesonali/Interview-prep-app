@@ -39,7 +39,9 @@ class Settings(BaseSettings):
     user_name: str = ""
     user_email: str = ""
     app_url: str = "http://localhost:8501"
-    data_dir: Path = Path("data")
+    data_dir: Path = Path("data")  # roles.yaml, Sprint 1 JSON files, the SQLite file
+    # SQLAlchemy URL: SQLite file locally, postgresql+psycopg://... in production.
+    database_url: str = "sqlite:///data/hoot.db"
 
     @property
     def has_api_key(self) -> bool:

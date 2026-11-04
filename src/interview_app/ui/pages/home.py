@@ -8,7 +8,6 @@ import streamlit as st
 
 from interview_app.guard import GuardBlocked, InputKind
 from interview_app.roles import Role, load_roles
-from interview_app.storage.history import list_sessions, load_session
 from interview_app.ui import state
 from interview_app.ui.components import section_header, show_guard_block
 
@@ -112,7 +111,7 @@ def _role_card(role: Role, i: int) -> None:
 def _recent_sessions() -> None:
     with st.container(key="recent"):
         st.html('<div class="hoot-h2">Recent sessions</div>')
-        sessions = list_sessions(state.settings().data_dir, limit=8)
+        sessions = state.store().list_sessions(limit=8)
         if not sessions:
             st.caption("No saved sessions yet. Finish a practice session and it will show up here.")
             return
@@ -121,8 +120,8 @@ def _recent_sessions() -> None:
             c1.markdown(f"**{s.role}** · {s.mode} · {s.started_at:%d %b %Y %H:%M}")
             c2.markdown(f"{s.answered}/{s.questions} answered")
             c3.markdown(f"⭐ {s.overall_average:.1f}/5" if s.answered else "—")
-            if c4.button("Open", key=f"open-{s.path.name}", width="stretch"):
-                st.session_state.practice = load_session(s.path)
+            if c4.button("Open", key=f"open-{s.id}", width="stretch"):
+                st.session_state.practice = state.store().load_session(s.id)
                 st.switch_page(st.session_state.pages["practice"])
 
 

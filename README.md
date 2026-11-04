@@ -51,7 +51,10 @@ Streamlit pages ──► features ──► GuardPipeline ──► OpenRouter 
 - `src/interview_app/models.py` — pydantic schemas for every structured call.
 - `src/interview_app/features/` — `jd_analyzer.py`, `practice.py` (session state machine + LLM
   operations) and `prompt_lab.py` (parallel comparison of prompt variants).
-- `src/interview_app/storage/history.py` — finished sessions saved as JSON in `data/sessions/`.
+- `src/interview_app/storage/` — `db.py` (SQLAlchemy engine + tables; `DATABASE_URL` picks SQLite
+  locally, Postgres in production), `store.py` (every read/write, scoped to one user; sessions are
+  saved after each answer and resumable from the dashboard), `import_json.py` (one-off import of
+  the Sprint 1 JSON files).
 - `src/interview_app/ui/` — Streamlit pages and shared components. `theme.py` holds the brand (owl
   mascot as inline SVG), the colour tokens and the CSS that styles keyed containers
   (`st.container(key=...)` → `.st-key-...`); `.streamlit/config.toml` carries the native theme
@@ -124,7 +127,7 @@ The answer-feedback task has five system prompts in `src/interview_app/llm/promp
 one per technique. Developer settings select which one scores your answers (default: the Lab
 winner, role + rubric); the **Prompt Lab** page, linked from the same expander because it is a
 developer tool rather than a user feature, runs all five on the same question and answer in parallel, shows score, cost, latency and the full
-feedback side by side, and stores your 1-5 usefulness rating in `data/prompt_lab.json`. The
+feedback side by side, and stores your 1-5 usefulness rating in the database (`prompt_lab_runs`). The
 leaderboard aggregates every saved run.
 
 | # | Technique | How it is applied |
@@ -200,5 +203,5 @@ changed. Scoring stays at 0.2 (stable, reproducible verdicts); coaching keeps 0.
 
 | Script | What it does |
 |---|---|
-| `scripts/run_prompt_lab.py` | 5 techniques × 3 sample answers (+ judge) → `data/prompt_lab.json` and a Markdown table; `--temperature-sweep`; `--dry-run` |
+| `scripts/run_prompt_lab.py` | 5 techniques × 3 sample answers (+ judge) → `prompt_lab_runs` table and a Markdown table; `--temperature-sweep`; `--dry-run` |
 | `scripts/jailbreak_experiment.py` | 31 attack/control inputs through the guard → `docs/jailbreak_experiment.xlsx`; `--live` adds the LLM guard |

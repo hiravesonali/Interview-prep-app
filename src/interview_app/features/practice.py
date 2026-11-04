@@ -9,6 +9,7 @@ from __future__ import annotations
 from collections.abc import Iterator
 from datetime import datetime
 from typing import Literal
+from uuid import uuid4
 
 from pydantic import BaseModel, Field
 
@@ -22,6 +23,7 @@ DIMENSIONS = ("correctness", "depth", "structure", "communication")
 
 
 class PracticeSession(BaseModel):
+    id: str = Field(default_factory=lambda: uuid4().hex)  # storage key; stable across saves
     role: str
     mode: Mode
     question_set: QuestionSet
