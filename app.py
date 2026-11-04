@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import streamlit as st
 
-from interview_app.ui import state
+from interview_app.config import get_settings
+from interview_app.ui import auth, state
 from interview_app.ui.components import render_sidebar_controls, render_sidebar_dynamic
 from interview_app.ui.pages import home, jd_analyzer, practice, prompt_lab
 from interview_app.ui.theme import CSS
@@ -16,7 +17,9 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 st.html(CSS)
-state.init_state()
+auth.export_secrets_to_env()  # must run before get_settings() is first called
+auth.require_login(get_settings())
+state.init_state(auth.current_user_id())
 
 pages = {
     "home": st.Page(home.render, title="Dashboard", icon="🏠", default=True),

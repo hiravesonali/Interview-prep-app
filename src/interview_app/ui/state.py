@@ -7,14 +7,15 @@ import streamlit as st
 from interview_app.config import Settings, get_settings
 from interview_app.guard import GuardPipeline, SecurityLog
 from interview_app.llm.client import OpenRouterClient, UsageTracker
-from interview_app.storage.store import Store, open_store
+from interview_app.storage.store import LOCAL_USER, Store, open_store
 
 
-def init_state() -> None:
+def init_state(user_id: str = LOCAL_USER) -> None:
+    """`user_id` scopes storage; app.py passes the signed-in email (see ui/auth.py)."""
     if "settings" in st.session_state:
         return
     settings: Settings = get_settings()
-    store = open_store(settings)
+    store = open_store(settings, user_id)
     # The in-memory tracker and log feed the sidebar for this browser session; their sinks
     # persist every call and guard decision (daily spend cap, audit trail).
     tracker = UsageTracker(sink=store.record_usage)

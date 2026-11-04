@@ -10,7 +10,7 @@ from interview_app.config import AVAILABLE_MODELS
 from interview_app.guard import GuardBlocked
 from interview_app.llm.prompts import list_prompts
 from interview_app.models import AnswerFeedback, Question
-from interview_app.ui import state
+from interview_app.ui import auth, state
 from interview_app.ui.theme import APP_NAME, APP_TAGLINE, mascot
 
 _TECHNIQUE_LABELS = {
@@ -43,7 +43,8 @@ def technique_label(name: str) -> str:
 def render_sidebar_controls(active: str) -> None:
     """Brand, welcome, menu and settings. Runs before the page so pages see the values."""
     s = state.settings()
-    first_name = (s.user_name.split() or ["there"])[0]
+    user_name, user_email = _identity(s)
+    first_name = (user_name.split() or ["there"])[0]
     with st.sidebar:
         with st.container(key="brand"):  # sticky; see theme.py
             st.html(
@@ -91,13 +92,22 @@ def render_sidebar_controls(active: str) -> None:
         # Filled after the page ran (see app.py) so cost and log reflect this run.
         st.session_state.sidebar_dynamic = st.container()
 
-        if s.user_name or s.user_email:
-            initial = (s.user_name or s.user_email)[:1].upper()
+        if user_name or user_email:
+            initial = (user_name or user_email)[:1].upper()
             st.html(
                 f'<div class="hoot-user"><div class="hoot-avatar">{initial}</div><div>'
-                f'<div class="n">{html.escape(s.user_name)}</div>'
-                f'<div class="e">{html.escape(s.user_email)}</div></div></div>'
+                f'<div class="n">{html.escape(user_name)}</div>'
+                f'<div class="e">{html.escape(user_email)}</div></div></div>'
             )
+        if auth.signed_in_email() and st.button("Sign out", width="stretch"):
+            st.logout()
+
+
+def _identity(s) -> tuple[str, str]:
+    """Signed-in Google identity when the gate is active, else the .env USER_NAME/USER_EMAIL."""
+    if email := auth.signed_in_email():
+        return st.user.get("name") or email.split("@")[0], email
+    return s.user_name, s.user_email
 
 
 def _nav_links(items: dict[str, tuple[str, str]], active: str) -> None:

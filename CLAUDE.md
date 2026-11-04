@@ -103,6 +103,15 @@ models (gpt-6-luna) spend completion tokens on thinking, so give them a generous
 OpenRouter model allowlist, so do not switch the guard to it. Settings come from `.env` via
 pydantic-settings (`config.Settings`, cached by `get_settings()`).
 
+**Auth and production mode** (`ui/auth.py`): app.py runs `export_secrets_to_env` (top-level
+`secrets.toml` keys become env vars so `config.Settings` stays the one way settings are read),
+then `require_login`, then `init_state(current_user_id())`. The gate is active when `APP_ENV=prod`
+or an `[auth]` block exists in `.streamlit/secrets.toml` (Streamlit's built-in OIDC `st.login`,
+Google by default, needs `authlib`); otherwise the app runs as the single `local` user. Allowed
+sign-ins come from `ALLOWED_EMAILS`; an empty list admits nobody. `app_env=prod` forces
+`guard_fail_closed=True` in a settings validator and refuses to run without auth. The signed-in
+email is the storage `user_id`. `.streamlit/secrets.toml.example` documents the keys.
+
 **Streamlit state** (`ui/state.py`): `init_state()` creates one settings/tracker/log/client/
 pipeline per browser session in `st.session_state`; pages get them through the accessor
 functions there. Pages are plain `render()` functions registered in `app.py`; the default page

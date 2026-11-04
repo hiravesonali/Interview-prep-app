@@ -222,6 +222,11 @@ h1, h2, h3 { letter-spacing: -0.3px; }
 .hoot-usage .big { font-size: 22px; font-weight: 800; line-height: 1.2; }
 .hoot-usage .row { display: flex; justify-content: space-between; gap: 10px; }
 .hoot-usage .small { font-size: 12px; opacity: .9; margin-top: 6px; }
+.hoot-signin { text-align: center; margin-top: 12vh; padding: 32px 24px 8px; }
+.hoot-signin img { display: block; margin: 0 auto; }
+.hoot-signin .name { font-size: 2rem; font-weight: 800; margin-top: 8px; }
+.hoot-signin .tag { color: var(--muted); margin-bottom: 16px; }
+.hoot-signin p { color: var(--muted); }
 .hoot-user { display: flex; align-items: center; gap: 12px; border: 1px solid var(--border);
   border-radius: 16px; padding: 12px 14px; margin-top: 10px; background: var(--surface); }
 .hoot-avatar { width: 40px; height: 40px; border-radius: 50%; flex: none; color: #fff;

@@ -183,5 +183,11 @@ browser refresh. All data is single-user and document-shaped (nested pydantic mo
 | Access | Private: Streamlit `st.login` (Google OIDC) + `ALLOWED_EMAILS` allowlist in secrets. `user_id` = the signed-in email; `"local"` when running without auth | the OpenRouter key lives in server secrets, so an open URL lets strangers spend it | public demo with only a cost cap |
 | Production safety | `APP_ENV=prod` forces the LLM guard to fail closed and requires auth | fail-open is right for local dev, wrong for a public app | — |
 
+Confirmed 2026-11-04 after discussion: Streamlit Community Cloud stays the host (native Streamlit
+hosting, git-push deploy, secrets UI, works with `st.login`); Neon stays the Postgres provider over
+Supabase because only Postgres is needed (Supabase Auth is not an OIDC provider for `st.login`),
+Neon auto-wakes from idle while a Supabase free project pauses after a week, and Neon's pooled
+URL works from Community Cloud without the IPv4 pooler detour. Switching is one URL in secrets.
+
 Migration: a one-off script imports the existing `data/sessions/*.json` and `data/prompt_lab.json`
 into the database so the Sprint 1 history and the Prompt Lab results (a course deliverable) survive.

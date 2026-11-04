@@ -11,6 +11,7 @@ wheels/
 
 # local secrets and data
 .env
+.streamlit/secrets.toml
 data/sessions/
 data/prompt_lab.json
 data/*.db
