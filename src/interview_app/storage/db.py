@@ -59,6 +59,37 @@ class LabRunRow(Base):
     payload: Mapped[dict[str, Any]] = mapped_column(JSON)
 
 
+class SecurityEventRow(Base):
+    """One guard decision (audit trail; the sidebar shows the in-memory log of the current run)."""
+
+    __tablename__ = "security_events"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[str] = mapped_column(String(320), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, index=True)
+    layer: Mapped[str] = mapped_column(String(32))
+    action: Mapped[str] = mapped_column(String(16))
+    category: Mapped[str] = mapped_column(String(64))
+    kind: Mapped[str] = mapped_column(String(32))
+    reason: Mapped[str] = mapped_column(String(1000))
+    matches: Mapped[list[str]] = mapped_column(JSON)
+
+
+class UsageEventRow(Base):
+    """One model call's tokens and cost; `cost_today` sums these for the daily spend cap."""
+
+    __tablename__ = "usage_events"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[str] = mapped_column(String(320), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, index=True)
+    model: Mapped[str] = mapped_column(String(100))
+    purpose: Mapped[str] = mapped_column(String(64))
+    prompt_tokens: Mapped[int] = mapped_column(Integer)
+    completion_tokens: Mapped[int] = mapped_column(Integer)
+    cost_usd: Mapped[float] = mapped_column(Float)
+
+
 def make_engine(url: str) -> Engine:
     """Engine for `url` with tables created; SQLite gets the settings Streamlit threads need."""
     if not url.startswith("sqlite"):

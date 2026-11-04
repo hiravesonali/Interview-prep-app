@@ -16,7 +16,7 @@ from __future__ import annotations
 import json
 import re
 import time
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
 from typing import Any, TypeVar
 
@@ -46,10 +46,15 @@ class Usage:
 
 @dataclass
 class UsageTracker:
+    """Per-browser-session totals for the sidebar; `sink` persists each call (daily spend cap)."""
+
     calls: list[Usage] = field(default_factory=list)
+    sink: Callable[[Usage], None] | None = None
 
     def add(self, usage: Usage) -> None:
         self.calls.append(usage)
+        if self.sink is not None:
+            self.sink(usage)
 
     @property
     def total_cost_usd(self) -> float:

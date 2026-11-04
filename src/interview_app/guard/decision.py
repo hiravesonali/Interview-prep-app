@@ -5,7 +5,7 @@ from enum import StrEnum
 from typing import Literal
 
 Action = Literal["allow", "block", "redact"]
-Layer = Literal["input_rules", "input_llm", "output", "openrouter"]
+Layer = Literal["budget", "input_rules", "input_llm", "output", "openrouter"]
 
 
 class InputKind(StrEnum):

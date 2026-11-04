@@ -14,15 +14,18 @@ def init_state() -> None:
     if "settings" in st.session_state:
         return
     settings: Settings = get_settings()
-    tracker = UsageTracker()
-    log = SecurityLog()
+    store = open_store(settings)
+    # The in-memory tracker and log feed the sidebar for this browser session; their sinks
+    # persist every call and guard decision (daily spend cap, audit trail).
+    tracker = UsageTracker(sink=store.record_usage)
+    log = SecurityLog(sink=store.record_security_event)
     client = OpenRouterClient(settings, tracker)
     st.session_state.settings = settings
+    st.session_state.store = store
     st.session_state.tracker = tracker
     st.session_state.security_log = log
     st.session_state.client = client
-    st.session_state.pipeline = GuardPipeline(client, settings, log)
-    st.session_state.store = open_store(settings)
+    st.session_state.pipeline = GuardPipeline(client, settings, log, cost_today=store.cost_today)
     st.session_state.model = settings.default_model
     st.session_state.selected_role = None
     st.session_state.custom_title = ""

@@ -150,12 +150,15 @@ def render_cost_card() -> None:
     t = state.tracker()
     limit = state.settings().max_session_cost_usd
     over = t.total_cost_usd > limit
+    today, daily = state.store().cost_today(), state.settings().max_daily_cost_usd
     st.html(
         '<div class="hoot-usage"><div class="row"><div><div class="label">Session cost</div>'
         f'<div class="big">${t.total_cost_usd:.3f}</div></div><div><div class="label">Tokens</div>'
         f'<div class="big">{t.total_tokens:,}</div></div></div>'
         f'<div class="small">{len(t.calls)} calls · soft limit ${limit:.2f}'
-        f"{' · ⚠️ over limit' if over else ''}</div></div>"
+        f"{' · ⚠️ over limit' if over else ''}</div>"
+        f'<div class="small">today ${today:.2f} of ${daily:.2f} daily cap'
+        f"{' · ⛔ reached' if today >= daily else ''}</div></div>"
     )
 
 

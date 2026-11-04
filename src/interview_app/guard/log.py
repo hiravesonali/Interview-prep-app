@@ -1,8 +1,9 @@
-"""In-memory security log shown in the sidebar."""
+"""Security log: in memory for the sidebar, plus an optional sink (the database audit trail)."""
 
 from __future__ import annotations
 
 from collections import Counter
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
 
@@ -23,19 +24,22 @@ class LogEntry:
 @dataclass
 class SecurityLog:
     entries: list[LogEntry] = field(default_factory=list)
+    sink: Callable[[LogEntry], None] | None = None
+    """Called with every entry; the app passes `Store.record_security_event`."""
 
     def record(self, decision: GuardDecision, kind: str) -> None:
-        self.entries.append(
-            LogEntry(
-                time=datetime.now(),
-                layer=decision.layer,
-                action=decision.action,
-                category=decision.category,
-                reason=decision.reason,
-                kind=kind,
-                matches=decision.matches,
-            )
+        entry = LogEntry(
+            time=datetime.now(),
+            layer=decision.layer,
+            action=decision.action,
+            category=decision.category,
+            reason=decision.reason,
+            kind=kind,
+            matches=decision.matches,
         )
+        self.entries.append(entry)
+        if self.sink is not None:
+            self.sink(entry)
 
     @property
     def counts(self) -> Counter[str]:

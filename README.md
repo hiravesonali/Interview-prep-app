@@ -99,7 +99,14 @@ would truncate the JSON (see `CallOverrides` in `guard/pipeline.py`).
    and a spend budget on the API key in the OpenRouter dashboard. A `403` from OpenRouter is
    surfaced in the security log as `openrouter_guardrail`.
 
-Every decision is recorded in the sidebar **Security log**. Try the **Guard playground** on
+5. **Daily spend cap**: every model call (the guard classifier included) is written to the
+   `usage_events` table; once a user's spend since midnight reaches `MAX_DAILY_COST_USD`
+   (default $5) the pipeline refuses further calls with a `budget` block. The sidebar's
+   per-session soft limit resets on refresh; this one does not, which is what matters once the
+   app has a public URL.
+
+Every decision is recorded in the sidebar **Security log** for the current browser session and
+in the `security_events` table as a permanent audit trail. Try the **Guard playground** on
 the dashboard.
 
 ### Jailbreak experiment

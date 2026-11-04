@@ -7,14 +7,22 @@ an in-memory engine (`make_engine("sqlite://")`). Nothing else in the app touche
 from __future__ import annotations
 
 from dataclasses import asdict
-from datetime import datetime
+from datetime import datetime, time
 
-from sqlalchemy import Engine, select
+from sqlalchemy import Engine, func, select
 from sqlalchemy.orm import Session
 
 from interview_app.config import Settings
 from interview_app.features.practice import PracticeSession
-from interview_app.storage.db import LabRunRow, SessionRow, get_engine
+from interview_app.guard.log import LogEntry
+from interview_app.llm.client import Usage
+from interview_app.storage.db import (
+    LabRunRow,
+    SecurityEventRow,
+    SessionRow,
+    UsageEventRow,
+    get_engine,
+)
 from interview_app.storage.history import SessionSummary
 from interview_app.storage.prompt_lab import LabRecord
 
@@ -94,6 +102,46 @@ class Store:
         stmt = select(LabRunRow).where(LabRunRow.user_id == self.user_id).order_by(LabRunRow.id)
         with Session(self.engine) as db:
             return [LabRecord(**r.payload) for r in db.scalars(stmt)]
+
+    # ----- audit trail and spend (sinks for SecurityLog / UsageTracker, see ui.state) -----
+
+    def record_security_event(self, entry: LogEntry) -> None:
+        with Session(self.engine) as db, db.begin():
+            db.add(
+                SecurityEventRow(
+                    user_id=self.user_id,
+                    created_at=entry.time,
+                    layer=entry.layer,
+                    action=entry.action,
+                    category=entry.category,
+                    kind=entry.kind,
+                    reason=entry.reason[:1000],
+                    matches=list(entry.matches),
+                )
+            )
+
+    def record_usage(self, usage: Usage, *, at: datetime | None = None) -> None:
+        with Session(self.engine) as db, db.begin():
+            db.add(
+                UsageEventRow(
+                    user_id=self.user_id,
+                    created_at=at or datetime.now(),
+                    model=usage.model,
+                    purpose=usage.purpose,
+                    prompt_tokens=usage.prompt_tokens,
+                    completion_tokens=usage.completion_tokens,
+                    cost_usd=usage.cost_usd,
+                )
+            )
+
+    def cost_today(self) -> float:
+        """USD spent by this user since local midnight, every model call included (guard too)."""
+        start = datetime.combine(datetime.now().date(), time.min)
+        stmt = select(func.coalesce(func.sum(UsageEventRow.cost_usd), 0.0)).where(
+            UsageEventRow.user_id == self.user_id, UsageEventRow.created_at >= start
+        )
+        with Session(self.engine) as db:
+            return float(db.scalar(stmt) or 0.0)
 
 
 def open_store(settings: Settings, user_id: str = LOCAL_USER) -> Store:

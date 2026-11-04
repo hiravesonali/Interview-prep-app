@@ -33,7 +33,8 @@ class Settings(BaseSettings):
     llm_guard_enabled: bool = True
     guard_fail_closed: bool = False
 
-    max_session_cost_usd: float = 2.0
+    max_session_cost_usd: float = 2.0  # sidebar soft limit per browser session (warning only)
+    max_daily_cost_usd: float = 5.0  # hard limit per user per day, enforced by the pipeline
 
     app_title: str = "Hoot - AI Interview Prep"
     user_name: str = ""

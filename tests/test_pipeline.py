@@ -83,3 +83,39 @@ def test_overrides_apply_to_text_calls_only() -> None:
     pipe.structured("sys", "hello", InputKind.ANSWER, GuardVerdict, max_tokens=4000)
     assert client.kwargs[-1]["temperature"] == 1.0
     assert client.kwargs[-1]["max_tokens"] == 4000  # structured keeps its own budget
+
+
+def test_daily_budget_blocks_before_any_call() -> None:
+    client = FakeClient("fine")
+    log = SecurityLog()
+    client.settings.max_daily_cost_usd = 1.0
+    pipe = GuardPipeline(
+        client, client.settings, log, llm_guard_enabled=False, cost_today=lambda: 1.0
+    )
+    with pytest.raises(GuardBlocked) as exc:
+        pipe.chat("sys", "hello", InputKind.ANSWER)
+    assert exc.value.decision.layer == "budget"
+    assert exc.value.decision.category == "daily_budget"
+    assert client.sent == [] and log.entries[-1].layer == "budget"
+
+
+def test_daily_budget_allows_under_the_cap() -> None:
+    client = FakeClient("fine")
+    client.settings.max_daily_cost_usd = 1.0
+    pipe = GuardPipeline(
+        client, client.settings, SecurityLog(), llm_guard_enabled=False, cost_today=lambda: 0.99
+    )
+    assert pipe.chat("sys", "hello", InputKind.ANSWER).text == "fine"
+
+
+def test_log_and_tracker_sinks_receive_every_entry() -> None:
+    from interview_app.llm.client import UsageTracker
+
+    seen: list = []
+    log = SecurityLog(sink=seen.append)
+    tracker = UsageTracker(sink=seen.append)
+    pipe, client, _ = _pipeline()
+    pipe.log = log
+    pipe.chat("sys", "hello", InputKind.ANSWER)  # input + output decisions
+    tracker.add(Usage("m", 1, 1, 0.01, 0.1))
+    assert [type(x).__name__ for x in seen] == ["LogEntry", "LogEntry", "Usage"]

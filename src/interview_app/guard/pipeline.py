@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 from typing import TypeVar
 
@@ -53,10 +53,14 @@ class GuardPipeline:
         log: SecurityLog,
         *,
         llm_guard_enabled: bool | None = None,
+        cost_today: Callable[[], float] | None = None,
     ) -> None:
+        """`cost_today` returns the user's spend so far today (USD); when given, every call is
+        refused once it reaches `settings.max_daily_cost_usd`. The app passes `Store.cost_today`."""
         self.client = client
         self.settings = settings
         self.log = log
+        self.cost_today = cost_today
         self.input_guard = InputGuard()
         self.output_guard = OutputGuard()
         self.llm_guard = LLMGuard(client, settings.guard_model, settings.guard_fail_closed)
@@ -67,8 +71,28 @@ class GuardPipeline:
 
     # ----- input side -----
 
+    def check_budget(self, kind: InputKind) -> None:
+        """Daily spend cap, checked before any paid call (the classifier included).
+
+        The sidebar's per-session soft limit resets on refresh; this one is persisted per user,
+        which is what matters once the app has a public URL.
+        """
+        if self.cost_today is None:
+            return
+        spent, limit = self.cost_today(), self.settings.max_daily_cost_usd
+        if spent < limit:
+            return
+        decision = GuardDecision.block(
+            "budget",
+            "daily_budget",
+            f"Daily spend limit reached (${spent:.2f} of ${limit:.2f} today). Try again tomorrow.",
+        )
+        self.log.record(decision, kind.value)
+        raise GuardBlocked(decision)
+
     def check_input(self, text: str, kind: InputKind) -> GuardDecision:
-        """Rules first (free), then the classifier. Returns the decision to forward."""
+        """Budget, then rules (free), then the classifier. Returns the decision to forward."""
+        self.check_budget(kind)
         decision = self.input_guard.check(text, kind)
         self.log.record(decision, kind.value)
         if not decision.allowed:

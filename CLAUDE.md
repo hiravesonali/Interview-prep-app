@@ -63,7 +63,8 @@ app.py (st.navigation, hidden) → ui/pages/* → features/* → guard.GuardPipe
                                                                │ InputGuard   rules, no network
                                                                │ LLMGuard     Haiku classifier (fail-open by default)
                                                                │ OutputGuard  system-prompt leak, HTML, secrets
-                                                               └ SecurityLog  shown in the sidebar
+                                                               ├ SecurityLog  sidebar + security_events table
+                                                               └ budget check  usage_events → daily cap
 ```
 
 **The guard pipeline is the single choke point.** `guard/pipeline.py` is the only module that
@@ -72,7 +73,9 @@ the client. Each call takes the user text plus an `InputKind` (sets the length c
 optional `user_template` where only `{input}` is replaced with the guard-checked text, so
 app-authored context (the question, role, etc.) never passes through the guard and braces in it
 are safe. A block raises `GuardBlocked(decision)`; pages render it with
-`components.show_guard_block`. `stream` runs the output guard only after the full text, so a
+`components.show_guard_block`. Before any paid call, `check_budget` compares the user's spend
+since midnight (`Store.cost_today`, passed in as `cost_today=`) with `max_daily_cost_usd` and
+raises a `budget`-layer block; `max_session_cost_usd` is only the sidebar's per-session warning. `stream` runs the output guard only after the full text, so a
 caller must be ready to replace what it already displayed. A `PermissionDeniedError` (403) from
 OpenRouter is converted into an `openrouter_guardrail` block. `pipe.overrides` (`CallOverrides`)
 carries the sidebar's temperature/max-tokens override: temperature applies to all main-model
@@ -122,7 +125,9 @@ index": a few scalar columns for listing plus a JSON `payload` holding the full 
 every row has a `user_id` (`LOCAL_USER = "local"` until sign-in lands). `Store` (from
 `ui.state.store()` in pages, `open_store(settings)` in scripts) is the only module that touches
 SQLAlchemy; `PracticeSession.id` is the upsert key, so saving after every answer updates one row.
-`make_engine` creates missing tables (no Alembic yet). `scripts/import_json_data.py` imports the
+`SecurityLog` and `UsageTracker` take a `sink` callback; `init_state` wires them to
+`Store.record_security_event` / `Store.record_usage` so the `security_events` and `usage_events`
+tables are the audit trail and spend ledger. `make_engine` creates missing tables (no Alembic yet). `scripts/import_json_data.py` imports the
 Sprint 1 JSON files idempotently. PLAN.md §9 records the persistence and deployment decisions.
 
 **Tests** never hit the network: subclass `OpenRouterClient` with a fake `chat`/`chat_structured`
