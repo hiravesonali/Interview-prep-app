@@ -1,7 +1,10 @@
 # Hoot · AI Interview Prep
 
-AI interview coach for technical roles. Two features, one dashboard, every prompt routed
-through a **security guard** to the **OpenRouter** API.
+AI interview coach for technical roles: a guided or mock **practice session** with scored
+feedback, a **job-description analyzer** with a prep plan and the interviewer's rubric, and an
+**AI resume builder** that tailors your resume to a job. One dashboard, every prompt routed
+through a **security guard** to the **OpenRouter** API. The Prompt Lab, the jailbreak sheet and
+the LLM critique are course deliverables, kept under Developer settings and `docs/`.
 
 > Sprint 1 (Turing College AI Engineering). Architecture and delivery plan: [PLAN.md](PLAN.md).
 
@@ -20,6 +23,8 @@ through a **security guard** to the **OpenRouter** API.
 | Jailbreak experiment: 31 attacks and controls → `docs/jailbreak_experiment.xlsx` | ✅ day 3 |
 | Interviewer persona (strict / neutral / friendly) and feedback style (concise / detailed) in practice setup; prompt blocks appended by code, feedback variants untouched | ✅ 2026-11-05 |
 | Interviewer's rubric: structured evaluation criteria (hiring bar, 1/3/5 anchors per dimension, green and red flags, probing questions, debrief rules) in the JD analyzer and on the session summary | ✅ 2026-11-05 |
+| Interviewer portraits: one image per persona generated with `google/gemini-3.1-flash-image` through chat completions, shrunk to 384 px and cached in the `images` table for all users; emoji fallback | ✅ 2026-11-05 |
+| LLM critique of the app (usability, security, prompt engineering) → `docs/llm_critique.md` with a "What we changed" section | ✅ 2026-11-05 |
 | AI resume builder: upload base resumes (PDF/DOCX/text → structured profile), tailor one per job description, export .docx / PDF / Markdown; bullets traceable to the original, contact details never sent to the model | ✅ 2026-11-05 |
 
 ## Quick start
@@ -44,6 +49,8 @@ Streamlit pages ──► features ──► GuardPipeline ──► OpenRouter 
                                    │  InputGuard   rules: length, secrets, injection, base64, PII
                                    │  LLMGuard     Haiku 4.5 classifier (structured verdict)
                                    │  OutputGuard  system-prompt leak, secrets, active HTML
+                                   │               (structured JSON calls: leak check only;
+                                   │                the validated pydantic object is rendered)
                                    └─ SecurityLog  shown in the sidebar
 ```
 
@@ -226,8 +233,10 @@ the three sample answers in both styles and lets the judge rate each ($0.11, 202
   judge showed for self-critique).
 - Scores barely move (one point on the strong answer), which is what the style blocks demand:
   "the persona changes tone only, never the scale" applies to length too.
-- Detailed stays the default because the explanation is what a learner reads in guided mode;
-  concise is the right setting for a timed mock session.
+- Detailed stays the default in guided mode because the explanation is what a learner reads;
+  mock sessions default to concise (a timed interview). Caveat: the judge prompt prefers the
+  shorter of two equivalent feedbacks, so it will not penalise concise for brevity; the finding
+  is that the extra words in detailed feedback are not extra evidence.
 
 ### Tuning one setting: temperature
 
@@ -241,6 +250,19 @@ mid answer twice at T = 0.2 and twice at T = 1.0 ($0.05):
 
 Dimension scores did not move; at T = 1.0 the overall score swung by one point and the gap list
 changed. Scoring stays at 0.2 (stable, reproducible verdicts); coaching keeps 0.5 for variety.
+
+## Image generation: the interviewer's face
+
+Picking a persona changes how the coach talks; a face for it makes the mock interview feel like
+one. `features/avatars.py` holds one prompt per persona (three different people, same flat
+vector style, no text). `OpenRouterClient.generate_image` calls `google/gemini-3.1-flash-image`
+through the standard `/chat/completions` endpoint with `modalities=["image", "text"]` and reads
+the base64 data URI from `message.images`; `GuardPipeline.image` puts the call behind the daily
+budget guard and the cost ledger like every other call. The model returns ~1 MB PNGs, so the
+portrait is shrunk to a 384 px WebP (~10 KB) with Pillow and cached in the `images` table, shared
+by every user: the whole feature costs three calls (about $0.07 each), not one per session. If
+the model refuses or is blocked by the key's allowlist, an emoji stands in and the session goes
+on.
 
 ## Deployment
 

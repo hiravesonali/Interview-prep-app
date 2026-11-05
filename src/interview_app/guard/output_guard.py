@@ -27,16 +27,18 @@ class OutputGuard:
         layer = "output"
         squashed_out = _squash(output)
         leaked = [
-            line.strip()
-            for line in system_prompt.splitlines()
+            i
+            for i, line in enumerate(system_prompt.splitlines(), 1)
             if len(line.strip()) >= _MIN_LEAK_LINE and _squash(line) in squashed_out
         ]
         if leaked:
+            # Only line numbers go to the log and the security_events table: the log is shown
+            # in the sidebar, so quoting the prompt there would be a leak of its own.
             return GuardDecision.block(
                 layer,
                 "leak",
                 "Response echoed the system prompt and was withheld.",
-                tuple(line[:40] + "..." for line in leaked),
+                tuple(f"system prompt line {i}" for i in leaked),
             )
 
         cleaned = _SCRIPT_RE.sub("", output)

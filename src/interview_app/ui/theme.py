@@ -406,6 +406,12 @@ h1, h2, h3 { letter-spacing: -0.3px; }
 .hoot-flag-label { font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 8px 0 4px; }
 .hoot-persona { display: inline-flex; gap: 6px; align-items: center; }
 
+/* ---------- interviewer avatar ---------- */
+.st-key-avatar img { border-radius: 22px; border: 3px solid var(--surface); box-shadow: 0 10px 24px color-mix(in srgb, var(--brand-deep) 18%, transparent); }
+.hoot-avatar-fallback { width: 100%; aspect-ratio: 1; border-radius: 22px; background: var(--section); display: flex; align-items: center;
+  justify-content: center; font-size: 56px; }
+.hoot-avatar-name { text-align: center; font-size: 12px; font-weight: 700; color: var(--muted); margin-top: 6px; }
+
 /* ---------- generic cards ---------- */
 .st-key-question_card { background: var(--section); border-radius: 22px; padding: 22px 26px; }
 .st-key-question_card h3 { margin: 4px 0 0; font-size: 22px; line-height: 1.35; }

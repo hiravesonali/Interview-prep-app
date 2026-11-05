@@ -18,7 +18,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy import JSON, DateTime, Engine, Float, Integer, String, create_engine
+from sqlalchemy import JSON, DateTime, Engine, Float, Integer, LargeBinary, String, create_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy.pool import StaticPool
 
@@ -116,6 +116,18 @@ class TailoredResumeRow(Base):
     match_score: Mapped[int] = mapped_column(Integer)
     created_at: Mapped[datetime] = mapped_column(DateTime, index=True)
     payload: Mapped[dict[str, Any]] = mapped_column(JSON)
+
+
+class ImageRow(Base):
+    """A generated image cached by name (e.g. persona portraits), shared by all users."""
+
+    __tablename__ = "images"
+
+    name: Mapped[str] = mapped_column(String(64), primary_key=True)
+    mime: Mapped[str] = mapped_column(String(32))
+    model: Mapped[str] = mapped_column(String(100))
+    created_at: Mapped[datetime] = mapped_column(DateTime)
+    data: Mapped[bytes] = mapped_column(LargeBinary)
 
 
 def normalize_url(url: str) -> str:

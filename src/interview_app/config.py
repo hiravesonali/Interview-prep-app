@@ -36,6 +36,7 @@ class Settings(BaseSettings):
 
     default_model: str = AVAILABLE_MODELS[0]
     guard_model: str = "anthropic/claude-haiku-4.5"
+    image_model: str = "google/gemini-3.1-flash-image"  # course allow-list, chat/completions
 
     llm_guard_enabled: bool = True
     guard_fail_closed: bool = False

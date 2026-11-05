@@ -35,6 +35,13 @@ Four features, one dashboard, every LLM call routed through a security guard to 
   (`unverified_bullets` flags the rest), and the match score is `match_scores` over the keyword
   list. Exports: .docx (python-docx), PDF (reportlab, standard fonts), Markdown
   (`features/resume_export.py`). Hand-offs: JD analyzer → tailor; tailored resume → JD analyzer.
+- **Interviewer portraits** (`features/avatars.py`): one generated image per persona via
+  `client.generate_image` (`google/gemini-3.1-flash-image`, chat completions with image
+  modality) behind `pipe.image` (budget guard + ledger), shrunk with Pillow and cached in the
+  shared `images` table (`Store.load_image` / `save_image`); emoji fallback. Already generated
+  in the production database, so do not regenerate unless the prompts change.
+- **LLM critique**: `scripts/llm_critique.py` → `docs/llm_critique.md` (optional task); rerun
+  when the guard or prompts change materially and refresh the "What we changed" section.
 - **Prompt Lab** (developer tool, linked from the sidebar's Developer settings expander, not the
   main menu): the course requirement "5 system prompts with different techniques, compare
   them". Five feedback prompts (zero-shot, few-shot, chain-of-thought, role+rubric,

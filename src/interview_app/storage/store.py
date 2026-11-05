@@ -18,6 +18,7 @@ from interview_app.features.resume import BaseResume, TailoredResumeDoc, match_s
 from interview_app.guard.log import LogEntry
 from interview_app.llm.client import Usage
 from interview_app.storage.db import (
+    ImageRow,
     LabRunRow,
     ResumeRow,
     SecurityEventRow,
@@ -195,6 +196,21 @@ class Store:
             row = db.get(TailoredResumeRow, doc_id)
             if row is not None and row.user_id == self.user_id:
                 db.delete(row)
+
+    # ----- generated images (shared cache, not per user) -----
+
+    def load_image(self, name: str) -> tuple[bytes, str] | None:
+        with Session(self.engine) as db:
+            row = db.get(ImageRow, name)
+            return None if row is None else (row.data, row.mime)
+
+    def save_image(self, name: str, data: bytes, mime: str, model: str) -> None:
+        with Session(self.engine) as db, db.begin():
+            row = db.get(ImageRow, name)
+            if row is None:
+                row = ImageRow(name=name)
+                db.add(row)
+            row.data, row.mime, row.model, row.created_at = data, mime, model, datetime.now()
 
     # ----- audit trail and spend (sinks for SecurityLog / UsageTracker, see ui.state) -----
 

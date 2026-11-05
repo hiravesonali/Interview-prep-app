@@ -43,6 +43,7 @@ def init_state(user_id: str = LOCAL_USER) -> None:
     st.session_state.jd_analysis = None
     st.session_state.jd_guide = None  # InterviewerGuide for the analysed JD
     st.session_state.practice_guide = None  # InterviewerGuide for the finished session
+    st.session_state.avatar_failed = set()  # personas whose portrait could not be generated
     # AI resume builder (see ui/pages/resume_builder.py for what each key means)
     st.session_state.rb_tab = "tailored"
     st.session_state.rb_screen = None

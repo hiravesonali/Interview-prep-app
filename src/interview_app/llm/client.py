@@ -13,6 +13,7 @@ so no local price table is needed.
 
 from __future__ import annotations
 
+import base64
 import json
 import re
 import time
@@ -69,6 +70,7 @@ class UsageTracker:
 class ChatResult:
     text: str
     usage: Usage
+    finish_reason: str = ""  # "length" means the reply was cut off (or reasoning ate the budget)
 
 
 @dataclass(frozen=True)
@@ -80,6 +82,17 @@ class StructuredResult[T]:
 
 class StructuredOutputError(RuntimeError):
     """The model did not return JSON matching the schema, even after a repair retry."""
+
+
+@dataclass(frozen=True)
+class ImageResult:
+    data: bytes
+    mime: str
+    usage: Usage
+
+
+class ImageGenerationError(RuntimeError):
+    """The image model answered without an image (refusal, text-only reply, blocked model)."""
 
 
 _FENCE_RE = re.compile(r"^```(?:json)?\s*|\s*```$", re.MULTILINE)
@@ -148,8 +161,39 @@ class OpenRouterClient:
         )
         usage = _usage_from_response(resp, model, time.perf_counter() - t0, purpose)
         self.tracker.add(usage)
-        text = resp.choices[0].message.content or ""
-        return ChatResult(text=text, usage=usage)
+        choice = resp.choices[0]
+        return ChatResult(
+            text=choice.message.content or "", usage=usage, finish_reason=choice.finish_reason or ""
+        )
+
+    # ----- image generation -----
+
+    def generate_image(
+        self, prompt: str, *, model: str | None = None, purpose: str = "image"
+    ) -> ImageResult:
+        """One image through the standard chat endpoint (`modalities=["image","text"]`).
+
+        OpenRouter returns images on `message.images[*].image_url.url` as a base64 data URI;
+        the openai SDK keeps that unknown field in `model_extra`.
+        """
+        model = model or self.settings.image_model
+        t0 = time.perf_counter()
+        resp = self._client.chat.completions.create(
+            model=model,
+            messages=[{"role": "user", "content": prompt}],
+            extra_body={"modalities": ["image", "text"], "usage": {"include": True}},
+        )
+        usage = _usage_from_response(resp, model, time.perf_counter() - t0, purpose)
+        self.tracker.add(usage)
+        message = resp.choices[0].message
+        images = (message.model_extra or {}).get("images") or []
+        if not images:
+            detail = f": {message.content[:200]}" if message.content else ""
+            raise ImageGenerationError(f"{model} returned no image{detail}")
+        url = images[0]["image_url"]["url"]
+        header, _, payload = url.partition(",")
+        mime = header.removeprefix("data:").split(";")[0] or "image/png"
+        return ImageResult(data=base64.b64decode(payload), mime=mime, usage=usage)
 
     # ----- structured output -----
 

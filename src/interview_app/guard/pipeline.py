@@ -15,7 +15,13 @@ from interview_app.guard.input_guard import InputGuard
 from interview_app.guard.llm_guard import LLMGuard
 from interview_app.guard.log import SecurityLog
 from interview_app.guard.output_guard import OutputGuard
-from interview_app.llm.client import ChatResult, Message, OpenRouterClient, StructuredResult
+from interview_app.llm.client import (
+    ChatResult,
+    ImageResult,
+    Message,
+    OpenRouterClient,
+    StructuredResult,
+)
 
 T = TypeVar("T", bound=BaseModel)
 
@@ -170,7 +176,7 @@ class GuardPipeline:
         except PermissionDeniedError as err:
             raise GuardBlocked(self._openrouter_block(err)) from err
         text = self.check_output(result.text, system_prompt)
-        return ChatResult(text=text, usage=result.usage)
+        return ChatResult(text=text, usage=result.usage, finish_reason=result.finish_reason)
 
     def structured(
         self,
@@ -236,6 +242,15 @@ class GuardPipeline:
         except PermissionDeniedError as err:
             raise GuardBlocked(self._openrouter_block(err)) from err
         self.check_output("".join(chunks), system_prompt)
+
+    def image(self, prompt: str, *, purpose: str = "image") -> ImageResult:
+        """App-authored prompt → image. No user text, so only the budget guard and the cost
+        ledger apply; a 403 from the allowlist becomes an `openrouter_guardrail` block."""
+        self.check_budget(InputKind.FREE_TEXT)
+        try:
+            return self.client.generate_image(prompt, purpose=purpose)
+        except PermissionDeniedError as err:
+            raise GuardBlocked(self._openrouter_block(err)) from err
 
     @staticmethod
     def _openrouter_block(err: PermissionDeniedError) -> GuardDecision:

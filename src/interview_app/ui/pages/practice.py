@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import streamlit as st
 
+from interview_app.features.avatars import PERSONA_FALLBACK, generate_avatar, get_avatar
 from interview_app.features.interviewer_guide import generate_guide
 from interview_app.features.practice import (
     PracticeSession,
@@ -12,7 +13,7 @@ from interview_app.features.practice import (
     generate_question_set,
 )
 from interview_app.guard import GuardBlocked
-from interview_app.llm.client import StructuredOutputError
+from interview_app.llm.client import ImageGenerationError, StructuredOutputError
 from interview_app.models import Difficulty, QuestionSet, QuestionType
 from interview_app.roles import find_role, load_roles
 from interview_app.ui import state
@@ -157,8 +158,9 @@ def _setup() -> None:
                 "Feedback style",
                 list(_STYLE_LABELS),
                 format_func=_STYLE_LABELS.__getitem__,
-                default="detailed",
-                key="setup_style",
+                # A mock interview is on the clock: concise there, detailed when learning.
+                default="concise" if mode == "mock" else "detailed",
+                key=f"setup_style_{mode}",
             )
             or "detailed"
         )
@@ -267,7 +269,11 @@ def _question_loop(session: PracticeSession) -> None:
         f"{session.mode} mode · {_PERSONA_LABELS[session.persona]} interviewer · "
         f"{session.style} feedback",
     )
-    render_question_card(q, key="question_card")
+    card, face = st.columns([5, 1], gap="medium", vertical_alignment="center")
+    with card:
+        render_question_card(q, key="question_card")
+    with face:
+        _avatar(session.persona)
 
     if session.mode == "guided":
         _guided_help(session)
@@ -491,3 +497,28 @@ def _interviewer_view(session: PracticeSession) -> None:
         st.session_state.practice_guide = result.data
         st.toast(f"Done · {result.usage.total_tokens:,} tokens · ${result.usage.cost_usd:.4f}")
         st.rerun()
+
+
+def _avatar(persona: str) -> None:
+    """The interviewer's portrait (optional task: image generation), generated once per persona
+    and cached in the database for everyone; an emoji stands in if generation fails."""
+    with st.container(key="avatar"):
+        cached = get_avatar(state.store(), persona)
+        if cached is None and persona not in st.session_state.avatar_failed:
+            try:
+                with st.spinner("Meeting your interviewer…"):
+                    result = generate_avatar(state.pipeline(), state.store(), persona)
+                cached = (result.data, result.mime)
+                st.toast(f"Portrait generated · ${result.usage.cost_usd:.4f}")
+            except (GuardBlocked, ImageGenerationError) as err:
+                st.session_state.avatar_failed.add(persona)
+                st.caption(f"No portrait: {err}"[:160])
+        label = _PERSONA_LABELS[persona][2:]
+        if cached is None:
+            st.html(
+                f'<div class="hoot-avatar-fallback">{PERSONA_FALLBACK[persona]}</div>'
+                f'<div class="hoot-avatar-name">{label} interviewer</div>'
+            )
+            return
+        st.image(cached[0], width="stretch")
+        st.html(f'<div class="hoot-avatar-name">{label} interviewer</div>')
