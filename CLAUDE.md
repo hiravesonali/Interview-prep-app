@@ -32,7 +32,9 @@ Three features, one dashboard, every LLM call routed through a security guard to
   wait for an explicit OK before writing code. Record decisions in `PLAN.md`.
 - **Prompts are hers.** The feedback prompt variants 02–05 under `llm/prompts/feedback/` are
   drafts that Sonali tunes herself; do not rewrite them unasked.
-- Commit and push only when asked. `.env` is gitignored; only `.env.example` is tracked.
+- Commit and push only when asked. Commits carry Sonali's name only: do not add a
+  `Co-Authored-By: Claude` trailer (GitHub renders it as a second author avatar). `.env` is
+  gitignored; only `.env.example` is tracked.
 - Deferred to after Sprint 1 (do not build unasked): RAG knowledge base (embeddings
   `qwen/qwen3-embedding-8b` default via OpenRouter), LangChain, deployment.
 - Sonali is a senior JS/TS developer new to Python: point out JavaScript-style thinking and
