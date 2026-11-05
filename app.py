@@ -2,13 +2,25 @@
 
 from __future__ import annotations
 
-import streamlit as st
+import sys
+from pathlib import Path
 
-from interview_app.config import get_settings
-from interview_app.ui import auth, state
-from interview_app.ui.components import render_sidebar_controls, render_sidebar_dynamic
-from interview_app.ui.pages import home, jd_analyzer, practice, prompt_lab
-from interview_app.ui.theme import CSS
+# `uv sync` installs this project, so the package imports normally. Streamlit Community Cloud
+# reads uv.lock but does not document whether it installs the project itself, so fall back to
+# the src/ directory rather than fail at import time.
+if not any(Path(p).name == "src" for p in sys.path):
+    sys.path.insert(0, str(Path(__file__).parent / "src"))
+
+import streamlit as st  # noqa: E402
+
+from interview_app.config import get_settings  # noqa: E402
+from interview_app.ui import auth, state  # noqa: E402
+from interview_app.ui.components import (  # noqa: E402
+    render_sidebar_controls,
+    render_sidebar_dynamic,
+)
+from interview_app.ui.pages import home, jd_analyzer, practice, prompt_lab  # noqa: E402
+from interview_app.ui.theme import CSS  # noqa: E402
 
 st.set_page_config(
     page_title="Hoot · AI Interview Prep",

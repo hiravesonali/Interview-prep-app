@@ -206,9 +206,59 @@ mid answer twice at T = 0.2 and twice at T = 1.0 ($0.05):
 Dimension scores did not move; at T = 1.0 the overall score swung by one point and the gap list
 changed. Scoring stays at 0.2 (stable, reproducible verdicts); coaching keeps 0.5 for variety.
 
+## Deployment
+
+Production = **Streamlit Community Cloud** (host) + **Neon** (Postgres) + Google sign-in.
+Decisions and alternatives are in `PLAN.md` §9. Local development needs none of this: without
+an `[auth]` block the app runs as the single `local` user against `data/hoot.db`.
+
+### 1. Database (Neon)
+
+1. Create a free project at neon.com (region near you), database `hoot`.
+2. Copy the **pooled** connection string (host contains `-pooler`) and turn it into a SQLAlchemy
+   URL by changing the scheme to `postgresql+psycopg://`; keep `sslmode=require` and
+   `channel_binding=require`:
+   `postgresql+psycopg://USER:PASSWORD@ep-xxx-pooler.REGION.aws.neon.tech/hoot?sslmode=require&channel_binding=require`
+3. Check it from your machine (creates the tables and prints the row counts):
+   ```bash
+   DATABASE_URL="postgresql+psycopg://..." uv run python scripts/check_db.py
+   DATABASE_URL="postgresql+psycopg://..." uv run python scripts/import_json_data.py   # optional: Sprint 1 history
+   ```
+
+### 2. Google sign-in (OAuth client)
+
+1. Google Cloud Console → APIs & Services → Credentials → **Create credentials → OAuth client ID**,
+   type **Web application**. (First time: configure the consent screen as *External*, add
+   yourself as a test user.)
+2. Authorised redirect URIs: `http://localhost:8501/oauth2callback` for local tries and
+   `https://YOUR-APP.streamlit.app/oauth2callback` once you know the app URL.
+3. Note the client ID and secret. Generate a cookie secret:
+   `python -c "import secrets; print(secrets.token_hex(32))"`.
+
+To try sign-in locally, copy `.streamlit/secrets.toml.example` to `.streamlit/secrets.toml`
+(gitignored), fill it in and restart the server. `ALLOWED_EMAILS` must contain your Google
+address; an empty allowlist admits nobody.
+
+### 3. Deploy on Community Cloud
+
+1. share.streamlit.io → **Create app** → from GitHub: this repo, branch `main`, entrypoint
+   `app.py`. Community Cloud installs from `uv.lock` and defaults to Python 3.12.
+2. **Advanced settings → Secrets**: paste the filled-in contents of
+   `.streamlit/secrets.toml.example` with `APP_ENV = "prod"`, the Neon URL, your allowlist and
+   the `[auth]` block with the production `redirect_uri`. Root-level keys become environment
+   variables, which is how `config.Settings` reads them.
+3. Deploy, then open the URL: you should see the sign-in card, Google, then the dashboard with
+   your email in the sidebar. `APP_ENV=prod` has forced the LLM guard to fail closed and the
+   daily spend cap (`MAX_DAILY_COST_USD`) is enforced per signed-in user.
+
+What to expect: the app sleeps after a while without visitors and wakes on the next visit;
+Neon suspends its compute when idle and resumes on the first query (a second or two).
+
 ## Scripts
 
 | Script | What it does |
 |---|---|
+| `scripts/check_db.py` | Connect to `DATABASE_URL`, create missing tables, print row counts: the pre-deploy check for a hosted Postgres URL |
+| `scripts/import_json_data.py` | Import the Sprint 1 JSON files (`data/sessions/*.json`, `data/prompt_lab.json`) into `DATABASE_URL`; idempotent |
 | `scripts/run_prompt_lab.py` | 5 techniques × 3 sample answers (+ judge) → `prompt_lab_runs` table and a Markdown table; `--temperature-sweep`; `--dry-run` |
 | `scripts/jailbreak_experiment.py` | 31 attack/control inputs through the guard → `docs/jailbreak_experiment.xlsx`; `--live` adds the LLM guard |

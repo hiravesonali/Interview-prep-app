@@ -93,7 +93,10 @@ class UsageEventRow(Base):
 def make_engine(url: str) -> Engine:
     """Engine for `url` with tables created; SQLite gets the settings Streamlit threads need."""
     if not url.startswith("sqlite"):
-        engine = create_engine(url, pool_pre_ping=True)
+        # Hosted Postgres (Neon) is reached through its connection pooler in transaction mode;
+        # psycopg's server-side prepared statements can break behind such poolers, so they are
+        # off. pool_pre_ping re-opens connections the (auto-suspending) server dropped.
+        engine = create_engine(url, pool_pre_ping=True, connect_args={"prepare_threshold": None})
         Base.metadata.create_all(engine)
         return engine
     # Streamlit runs each rerun on a different thread, so SQLite must allow cross-thread use.
