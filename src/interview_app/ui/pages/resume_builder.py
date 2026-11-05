@@ -50,14 +50,17 @@ def render() -> None:
         "Upload your resumes, then build a version tailored to any job. Every bullet stays "
         "traceable to what you actually wrote.",
     )
-    tab = st.segmented_control(
-        "Tab",
-        list(_TABS),
-        format_func=_TABS.__getitem__,
-        default=st.session_state.rb_tab,
-        key="rb_tab_control",
-        label_visibility="collapsed",
-    )
+    # No widget key on purpose: a keyed control keeps its own value across reruns and would
+    # undo a programmatic tab switch (`_go`). Without a key the widget is re-created whenever
+    # `default` changes, so session state stays the single source of truth.
+    with st.container(key="rb_tab_control"):
+        tab = st.segmented_control(
+            "Tab",
+            list(_TABS),
+            format_func=_TABS.__getitem__,
+            default=st.session_state.rb_tab,
+            label_visibility="collapsed",
+        )
     if tab and tab != st.session_state.rb_tab:
         st.session_state.rb_tab = tab
         st.session_state.rb_screen = None
