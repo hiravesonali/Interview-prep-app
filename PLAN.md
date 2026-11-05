@@ -149,6 +149,10 @@ Later (not in Sprint 1): voice answers (OpenRouter STT), CV upload for skill-gap
 - Embeddings: `qwen/qwen3-embedding-8b` default, OpenAI small/large selectable (phase 2).
 - RAG, LangChain, deployment: after Sprint 1 (deployment + database agreed 2026-11-04, see §9).
 - Working style: Claude scaffolds and documents decisions; Sonali writes/tunes the prompt variants herself.
+- Question wording (2026-11-05): questions stay a ten-question structured batch, but each `question`
+  must be 25 words or fewer, ask one thing, use plain English, and match the difficulty ladder
+  (junior = definitions, mid = how/why or comparison, senior = one-sentence trade-off). Rules and
+  BAD/GOOD pairs live in `llm/prompts/question_generation.md`; the schema and hints are unchanged.
 
 ## 7. Still open
 Nothing blocking. Image generation and open-source models (optional tasks) are skipped for Sprint 1.
