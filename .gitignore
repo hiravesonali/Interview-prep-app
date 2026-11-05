@@ -15,3 +15,5 @@ wheels/
 data/sessions/
 data/prompt_lab.json
 data/*.db
+.neon
+node_modules/

@@ -215,15 +215,16 @@ an `[auth]` block the app runs as the single `local` user against `data/hoot.db`
 ### 1. Database (Neon)
 
 1. Create a free project at neon.com (region near you), database `hoot`.
-2. Copy the **pooled** connection string (host contains `-pooler`) and turn it into a SQLAlchemy
-   URL by changing the scheme to `postgresql+psycopg://`; keep `sslmode=require` and
-   `channel_binding=require`:
-   `postgresql+psycopg://USER:PASSWORD@ep-xxx-pooler.REGION.aws.neon.tech/hoot?sslmode=require&channel_binding=require`
+2. Use the **pooled** connection string (host contains `-pooler`) as `DATABASE_URL`, exactly as
+   Neon shows it (`postgresql://USER:PASSWORD@ep-xxx-pooler.REGION.aws.neon.tech/neondb?sslmode=require&channel_binding=require`).
+   The app pins the psycopg driver itself. With the Neon CLI, `neon init` writes this into `.env`.
 3. Check it from your machine (creates the tables and prints the row counts):
    ```bash
-   DATABASE_URL="postgresql+psycopg://..." uv run python scripts/check_db.py
-   DATABASE_URL="postgresql+psycopg://..." uv run python scripts/import_json_data.py   # optional: Sprint 1 history
+   uv run python scripts/check_db.py                     # uses DATABASE_URL from .env
+   uv run python scripts/import_json_data.py             # optional: Sprint 1 history → Neon
    ```
+   Note: once `.env` holds the Neon URL, local runs use Neon too (as user `local`); remove the
+   line or set `DATABASE_URL=sqlite:///data/hoot.db` to go back to the local file.
 
 ### 2. Google sign-in (OAuth client)
 

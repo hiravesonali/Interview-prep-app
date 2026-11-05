@@ -90,8 +90,20 @@ class UsageEventRow(Base):
     cost_usd: Mapped[float] = mapped_column(Float)
 
 
+def normalize_url(url: str) -> str:
+    """Accept a plain Postgres URL (what Neon and most hosts hand out) and pin the psycopg driver.
+
+    SQLAlchemy's bare `postgresql://` means psycopg2, which is not installed here.
+    """
+    for prefix in ("postgresql://", "postgres://"):
+        if url.startswith(prefix):
+            return "postgresql+psycopg://" + url[len(prefix) :]
+    return url
+
+
 def make_engine(url: str) -> Engine:
     """Engine for `url` with tables created; SQLite gets the settings Streamlit threads need."""
+    url = normalize_url(url)
     if not url.startswith("sqlite"):
         # Hosted Postgres (Neon) is reached through its connection pooler in transaction mode;
         # psycopg's server-side prepared statements can break behind such poolers, so they are

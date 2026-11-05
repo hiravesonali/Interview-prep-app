@@ -129,7 +129,7 @@ is kept visible through a zero-height sticky header. These selectors depend on S
 internals, so verify in the browser after upgrading Streamlit.
 
 **Storage** (`storage/`): SQLAlchemy 2.x, `DATABASE_URL` selects the engine (`sqlite:///data/hoot.db`
-locally, `postgresql+psycopg://…` in production, `sqlite://` in tests). Tables are "document with
+locally, Neon's `postgresql://…` URL in production (`normalize_url` pins `+psycopg`), `sqlite://` in tests). Tables are "document with
 index": a few scalar columns for listing plus a JSON `payload` holding the full pydantic dump, and
 every row has a `user_id` (`LOCAL_USER = "local"` until sign-in lands). `Store` (from
 `ui.state.store()` in pages, `open_store(settings)` in scripts) is the only module that touches

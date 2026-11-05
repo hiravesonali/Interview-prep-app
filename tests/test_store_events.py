@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from interview_app.guard.decision import GuardDecision
 from interview_app.guard.log import SecurityLog
 from interview_app.llm.client import Usage, UsageTracker
-from interview_app.storage.db import SecurityEventRow, make_engine
+from interview_app.storage.db import SecurityEventRow, make_engine, normalize_url
 from interview_app.storage.store import Store
 
 
@@ -38,3 +38,11 @@ def test_cost_today_sums_only_today_and_only_this_user() -> None:
     assert round(alice.cost_today(), 2) == 0.31
     assert bob.cost_today() == 9.0
     assert Store(engine, "nobody").cost_today() == 0.0
+
+
+def test_plain_postgres_urls_get_the_psycopg_driver() -> None:
+    neon = "postgresql://u:p@ep-x-pooler.eu-central-1.aws.neon.tech/neondb?sslmode=require"
+    assert normalize_url(neon) == "postgresql+psycopg://" + neon.removeprefix("postgresql://")
+    assert normalize_url("postgres://u:p@h/db") == "postgresql+psycopg://u:p@h/db"
+    assert normalize_url("postgresql+psycopg://u:p@h/db") == "postgresql+psycopg://u:p@h/db"
+    assert normalize_url("sqlite:///data/hoot.db") == "sqlite:///data/hoot.db"
