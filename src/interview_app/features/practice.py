@@ -15,10 +15,12 @@ from pydantic import BaseModel, Field
 
 from interview_app.guard import GuardPipeline, InputKind
 from interview_app.llm.client import StructuredResult
-from interview_app.llm.prompts import render_prompt
+from interview_app.llm.prompts import load_prompt, render_prompt
 from interview_app.models import AnswerFeedback, Difficulty, Question, QuestionSet, QuestionType
 
 Mode = Literal["guided", "mock"]
+Persona = Literal["strict", "neutral", "friendly"]
+Style = Literal["concise", "detailed"]
 DIMENSIONS = ("correctness", "depth", "structure", "communication")
 
 
@@ -29,6 +31,8 @@ class PracticeSession(BaseModel):
     question_set: QuestionSet
     feedback_technique: str
     source: Literal["generated", "jd"] = "generated"
+    persona: Persona = "neutral"  # tone of the coach and the feedback (optional task)
+    style: Style = "detailed"  # concise vs detailed responses (optional task)
     index: int = 0
     answers: dict[int, str] = Field(default_factory=dict)
     feedback: dict[int, AnswerFeedback] = Field(default_factory=dict)
@@ -110,6 +114,23 @@ class PracticeSession(BaseModel):
 
 # ----- LLM-backed operations -----
 
+
+def build_system_prompt(
+    name: str, role: str, *, persona: Persona | None = None, style: Style | None = None
+) -> str:
+    """The task prompt plus optional persona and length blocks from `prompts/style/`.
+
+    The blocks are appended by code so the feedback variants (the Prompt Lab's subject) stay
+    untouched; the Lab passes neither and compares the bare techniques.
+    """
+    parts = [render_prompt(name, role=role)]
+    if persona:
+        parts.append(load_prompt(f"style/persona_{persona}"))
+    if style:
+        parts.append(load_prompt(f"style/style_{style}"))
+    return "\n\n".join(parts)
+
+
 _GENERATION_TEMPLATE = """Role: {input}
 Difficulty: {difficulty}
 Number of questions: {count}
@@ -160,7 +181,14 @@ Candidate's note (may be empty): {input}"""
 
 
 def coach_stream(
-    pipe: GuardPipeline, role: str, question: Question, note: str = "", model: str | None = None
+    pipe: GuardPipeline,
+    role: str,
+    question: Question,
+    note: str = "",
+    model: str | None = None,
+    *,
+    persona: Persona | None = None,
+    style: Style | None = None,
 ) -> Iterator[str]:
     template = (
         _COACH_TEMPLATE.replace("{type}", question.type.value)
@@ -168,7 +196,7 @@ def coach_stream(
         .replace("{question}", question.question)
     )
     return pipe.stream(
-        render_prompt("coach_guided", role=role),
+        build_system_prompt("coach_guided", role, persona=persona, style=style),
         note.strip() or "(none)",
         InputKind.FREE_TEXT,
         user_template=template,
@@ -195,6 +223,8 @@ def evaluate_answer_detailed(
     *,
     technique: str = "feedback/01_zero_shot",
     model: str | None = None,
+    persona: Persona | None = None,
+    style: Style | None = None,
 ) -> StructuredResult[AnswerFeedback]:
     """Like evaluate_answer but also returns raw output and usage (used by the Prompt Lab)."""
     template = (
@@ -204,7 +234,7 @@ def evaluate_answer_detailed(
         .replace("{covers}", "; ".join(question.strong_answer_covers))
     )
     result = pipe.structured(
-        render_prompt(technique, role=role),
+        build_system_prompt(technique, role, persona=persona, style=style),
         answer,
         InputKind.ANSWER,
         AnswerFeedback,
@@ -223,7 +253,9 @@ def evaluate_answer(
     *,
     technique: str = "feedback/01_zero_shot",
     model: str | None = None,
+    persona: Persona | None = None,
+    style: Style | None = None,
 ) -> AnswerFeedback:
     return evaluate_answer_detailed(
-        pipe, role, question, answer, technique=technique, model=model
+        pipe, role, question, answer, technique=technique, model=model, persona=persona, style=style
     ).data

@@ -41,6 +41,8 @@ def init_state(user_id: str = LOCAL_USER) -> None:
     st.session_state.practice = None
     st.session_state.pending_question_set = None
     st.session_state.jd_analysis = None
+    st.session_state.jd_guide = None  # InterviewerGuide for the analysed JD
+    st.session_state.practice_guide = None  # InterviewerGuide for the finished session
     # AI resume builder (see ui/pages/resume_builder.py for what each key means)
     st.session_state.rb_tab = "tailored"
     st.session_state.rb_screen = None

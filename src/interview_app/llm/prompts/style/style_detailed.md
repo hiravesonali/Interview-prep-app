@@ -1,0 +1,1 @@
+Response length: DETAILED. The candidate wants depth. Explain the why behind each score in two or three sentences, give concrete examples of what to say instead, and use the full length limits of the task.

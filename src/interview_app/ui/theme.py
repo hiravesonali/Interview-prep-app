@@ -389,6 +389,23 @@ h1, h2, h3 { letter-spacing: -0.3px; }
 .st-key-rb_gaps li, .st-key-rb_notes li { margin-bottom: 8px; }
 .st-key-rb_notes small { color: var(--muted); font-weight: 600; margin-left: 4px; }
 
+/* ---------- interviewer guide ---------- */
+.st-key-guide_bar { background: var(--section); border-radius: 22px; padding: 18px 24px 14px; margin-bottom: 12px; }
+.st-key-guide_bar h3 { margin: 4px 0 6px; font-size: 22px; }
+.st-key-guide_bar p { color: var(--ink); margin: 0 0 6px; max-width: 80ch; }
+.hoot-rubric { width: 100%; border-collapse: separate; border-spacing: 0; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 18px; overflow: hidden; font-size: 13.5px; margin-bottom: 14px; }
+.hoot-rubric th, .hoot-rubric td { padding: 10px 12px; vertical-align: top; border-bottom: 1px solid var(--border); text-align: left; }
+.hoot-rubric thead th { background: var(--section); color: var(--brand-deep); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; }
+.hoot-rubric tbody th { color: var(--ink); text-transform: capitalize; white-space: nowrap; }
+.hoot-rubric tr:last-child td, .hoot-rubric tr:last-child th { border-bottom: none; }
+.st-key-guide_technical, .st-key-guide_behavioural, .st-key-guide_rules { background: var(--surface); border: 1px solid var(--border);
+  border-radius: 18px; padding: 14px 18px 8px; margin-bottom: 12px; height: 100%; }
+.st-key-guide_technical ul, .st-key-guide_behavioural ul, .st-key-guide_rules ul { margin: 0 0 8px; padding-left: 18px; color: var(--ink); }
+.st-key-guide_technical li, .st-key-guide_behavioural li, .st-key-guide_rules li { margin-bottom: 5px; }
+.hoot-flag-label { font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 8px 0 4px; }
+.hoot-persona { display: inline-flex; gap: 6px; align-items: center; }
+
 /* ---------- generic cards ---------- */
 .st-key-question_card { background: var(--section); border-radius: 22px; padding: 22px 26px; }
 .st-key-question_card h3 { margin: 4px 0 0; font-size: 22px; line-height: 1.35; }

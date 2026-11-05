@@ -100,6 +100,34 @@ class JobAnalysis(BaseModel):
     red_flags: list[str]
 
 
+# ---------- Interviewer guidelines (evaluation criteria) ----------
+
+
+class RubricAnchor(BaseModel):
+    dimension: Literal["correctness", "depth", "structure", "communication"]
+    looks_like_1: str
+    looks_like_3: str
+    looks_like_5: str
+
+
+class GuideSection(BaseModel):
+    kind: Literal["technical", "behavioural"]
+    green_flags: list[str]
+    red_flags: list[str]
+    probing_questions: list[str]
+
+
+class InterviewerGuide(BaseModel):
+    """What the interviewer is told to look for: the candidate's view of the other side."""
+
+    role: str
+    seniority: str
+    hiring_bar: str
+    rubric: list[RubricAnchor]
+    sections: list[GuideSection]
+    decision_rules: list[str]
+
+
 # ---------- Feature 3: AI resume builder ----------
 
 

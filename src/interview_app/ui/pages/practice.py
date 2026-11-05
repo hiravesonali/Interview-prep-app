@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import streamlit as st
 
+from interview_app.features.interviewer_guide import generate_guide
 from interview_app.features.practice import (
     PracticeSession,
     coach_stream,
@@ -17,6 +18,7 @@ from interview_app.roles import find_role, load_roles
 from interview_app.ui import state
 from interview_app.ui.components import (
     render_feedback,
+    render_interviewer_guide,
     render_question_card,
     section_header,
     show_guard_block,
@@ -49,6 +51,17 @@ _DIFFICULTY_HELP = {
     "junior": 'definitions and basics, e.g. "What is a REST API?"',
     "mid": "how and why things work, comparisons",
     "senior": "small real-world problems, design decisions and trade-offs",
+}
+_PERSONA_LABELS = {"strict": "🧐 Strict", "neutral": "😐 Neutral", "friendly": "😊 Friendly"}
+_PERSONA_HELP = {
+    "strict": "terse, no praise without evidence, probes every vague claim",
+    "neutral": "even-handed and factual",
+    "friendly": "warm and encouraging, still honest about gaps",
+}
+_STYLE_LABELS = {"concise": "Concise", "detailed": "Detailed"}
+_STYLE_HELP = {
+    "concise": "one-line comments, short model answer",
+    "detailed": "the why behind each score and what to say instead",
 }
 _TYPE_LABELS = {
     "technical": "Technical",
@@ -127,6 +140,29 @@ def _setup() -> None:
             or Difficulty.MID.value
         )
         c2.caption(f"{_DIFFICULTY_LABELS[difficulty]}: {_DIFFICULTY_HELP[difficulty]}")
+        c3, c4 = st.columns(2, gap="large")
+        persona = (
+            c3.segmented_control(
+                "Interviewer",
+                list(_PERSONA_LABELS),
+                format_func=_PERSONA_LABELS.__getitem__,
+                default="neutral",
+                key="setup_persona",
+            )
+            or "neutral"
+        )
+        c3.caption(f"{_PERSONA_LABELS[persona][2:]}: {_PERSONA_HELP[persona]}")
+        style = (
+            c4.segmented_control(
+                "Feedback style",
+                list(_STYLE_LABELS),
+                format_func=_STYLE_LABELS.__getitem__,
+                default="detailed",
+                key="setup_style",
+            )
+            or "detailed"
+        )
+        c4.caption(f"{_STYLE_LABELS[style]}: {_STYLE_HELP[style]}")
 
         if pending:
             step_header(3, "What to ask", "Already decided by the job description.")
@@ -192,7 +228,10 @@ def _setup() -> None:
         question_set=qs,
         feedback_technique=st.session_state.feedback_technique,
         source=source,
+        persona=persona,
+        style=style,
     )
+    st.session_state.practice_guide = None
     st.rerun()
 
 
@@ -225,7 +264,8 @@ def _question_loop(session: PracticeSession) -> None:
     st.progress(
         session.index / session.total,
         text=f"Question {session.index + 1} of {session.total} · {session.role} · "
-        f"{session.mode} mode",
+        f"{session.mode} mode · {_PERSONA_LABELS[session.persona]} interviewer · "
+        f"{session.style} feedback",
     )
     render_question_card(q, key="question_card")
 
@@ -302,7 +342,13 @@ def _guided_help(session: PracticeSession) -> None:
             text = ""
             try:
                 for chunk in coach_stream(
-                    state.pipeline(), session.role, q, note=note, model=state.current_model()
+                    state.pipeline(),
+                    session.role,
+                    q,
+                    note=note,
+                    model=state.current_model(),
+                    persona=session.persona,
+                    style=session.style,
                 ):
                     text += chunk
                     slot.markdown(text + "▌")
@@ -325,6 +371,8 @@ def _evaluate(session: PracticeSession, qid: int) -> None:
                 session.answers[qid],
                 technique=session.feedback_technique,
                 model=state.current_model(),
+                persona=session.persona,
+                style=session.style,
             )
     except GuardBlocked as err:
         session.answers.pop(qid, None)
@@ -349,6 +397,8 @@ def _evaluate_all(session: PracticeSession) -> None:
                 session.answers[qid],
                 technique=session.feedback_technique,
                 model=state.current_model(),
+                persona=session.persona,
+                style=session.style,
             )
         except GuardBlocked as err:
             failed.append(
@@ -370,6 +420,7 @@ def _summary(session: PracticeSession) -> None:
     answered = len(session.answers)
     st.caption(
         f"{session.mode} mode · {answered}/{session.total} answered · "
+        f"{_PERSONA_LABELS[session.persona][2:].lower()} interviewer · {session.style} feedback · "
         f"started {session.started_at:%d %b %H:%M}"
     )
     if errors := st.session_state.pop("scoring_errors", None):
@@ -397,6 +448,8 @@ def _summary(session: PracticeSession) -> None:
                 if fb:
                     render_feedback(fb)
 
+    _interviewer_view(session)
+
     c1, c2 = st.columns(2)
     retry = session.retry_set()
     if retry and c1.button(f"Retry the {len(retry.questions)} weak questions", type="primary"):
@@ -405,4 +458,36 @@ def _summary(session: PracticeSession) -> None:
         st.rerun()
     if c2.button("New session"):
         st.session_state.practice = None
+        st.rerun()
+
+
+def _interviewer_view(session: PracticeSession) -> None:
+    """Optional task: structured evaluation criteria, generated once per summary."""
+    guide = st.session_state.get("practice_guide")
+    with st.expander("🧑‍⚖️ What the interviewer looks for", expanded=guide is not None):
+        if guide is not None:
+            render_interviewer_guide(guide)
+            return
+        st.caption(
+            "The hiring bar, what a 1 / 3 / 5 looks like per dimension, green and red flags and "
+            "the probing questions interviewers use. One model call, about 5 cents."
+        )
+        if not st.button("Generate the interviewer's rubric", key="summary_guide"):
+            return
+        try:
+            with st.spinner("Writing the interviewer guidelines… (20-40 s)"):
+                result = generate_guide(
+                    state.pipeline(),
+                    session.role,
+                    session.question_set.difficulty.value,
+                    model=state.current_model(),
+                )
+        except GuardBlocked as err:
+            show_guard_block(err)
+            return
+        except StructuredOutputError as err:
+            st.error(f"The model did not return a valid guide. Try again. ({err})")
+            return
+        st.session_state.practice_guide = result.data
+        st.toast(f"Done · {result.usage.total_tokens:,} tokens · ${result.usage.cost_usd:.4f}")
         st.rerun()

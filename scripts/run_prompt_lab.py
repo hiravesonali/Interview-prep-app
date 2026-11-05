@@ -3,6 +3,7 @@
     uv run python scripts/run_prompt_lab.py                     # 5 techniques x 3 answers + judge
     uv run python scripts/run_prompt_lab.py --no-judge
     uv run python scripts/run_prompt_lab.py --temperature-sweep # zero-shot at T=0.2 / 1.0, x2 each
+    uv run python scripts/run_prompt_lab.py --style-sweep       # grader: concise vs detailed
     uv run python scripts/run_prompt_lab.py --dry-run           # print the plan, call nothing
 
 Results are appended to the database (same store as the Lab page, so the leaderboard
@@ -17,10 +18,12 @@ import sys
 from collections import defaultdict
 
 from interview_app.config import AVAILABLE_MODELS, get_settings
+from interview_app.features.practice import evaluate_answer_detailed
 from interview_app.features.prompt_lab import (
     SAMPLE_ANSWERS,
     SAMPLE_QUESTION,
     LabResult,
+    judge_feedback,
     judge_results,
     run_comparison,
 )
@@ -123,12 +126,38 @@ def temperature_sweep(pipe: GuardPipeline, model: str) -> None:
     pipe.overrides.temperature = None
 
 
+def style_sweep(pipe: GuardPipeline, model: str, judge_model: str | None) -> None:
+    """Easy optional task: concise vs detailed responses, same grader, all three answers."""
+    technique = "feedback/04_role_rubric"
+    print("\n### Response style sweep (role + rubric, no persona block)\n")
+    print("| Style | Answer | Overall | Judge | Tokens | Cost | Latency | Words in feedback |")
+    print("|---|---|---|---|---|---|---|---|")
+    for style in ("concise", "detailed"):
+        for level, answer in SAMPLE_ANSWERS.items():
+            r = evaluate_answer_detailed(
+                pipe, ROLE, SAMPLE_QUESTION, answer, technique=technique, model=model, style=style
+            )
+            fb, u = r.data, r.usage
+            judge = "-"
+            if judge_model:
+                verdict, _ = judge_feedback(
+                    pipe, ROLE, SAMPLE_QUESTION, answer, fb, model=judge_model
+                )
+                judge = str(verdict.overall)
+            words = len(fb.model_dump_json(exclude_none=True).split())
+            print(
+                f"| {style} | {level} | {fb.overall} | {judge} | {u.total_tokens:,} | "
+                f"${u.cost_usd:.4f} | {u.latency_s:.1f}s | {words} |"
+            )
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--model", default=None, help="feedback model (default: DEFAULT_MODEL)")
     ap.add_argument("--judge-model", default=None, help="default: first course model != model")
     ap.add_argument("--no-judge", action="store_true")
     ap.add_argument("--temperature-sweep", action="store_true")
+    ap.add_argument("--style-sweep", action="store_true")
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args()
 
@@ -140,6 +169,10 @@ def main() -> int:
     print(f"feedback: {model} · judge: {judge_model or 'off'} · guard: {settings.guard_model}")
     if args.dry_run:
         n = len(list_prompts("feedback")) * len(SAMPLE_ANSWERS)
+        if args.temperature_sweep:
+            n = 4
+        elif args.style_sweep:
+            n = 2 * len(SAMPLE_ANSWERS)
         print(f"would make {n} feedback calls" + (f" + {n} judge calls" if judge_model else ""))
         return 0
     if not settings.has_api_key:
@@ -150,6 +183,8 @@ def main() -> int:
     pipe = GuardPipeline(client, settings, SecurityLog())
     if args.temperature_sweep:
         temperature_sweep(pipe, model)
+    elif args.style_sweep:
+        style_sweep(pipe, model, judge_model)
     else:
         comparison(pipe, model, judge_model)
     t = client.tracker

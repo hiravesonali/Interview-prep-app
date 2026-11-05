@@ -223,3 +223,14 @@ tailored version per application) is the model for the flow; the UI follows Hoot
 | Export | `.docx` (`python-docx`), PDF (`reportlab`, standard fonts) and Markdown | the file people actually send | WeasyPrint (needs system libraries, breaks on Community Cloud) |
 | Hand-offs | JD analyzer → "Tailor my resume for this JD"; tailored resume → "Prepare for this interview" prefills the JD analyzer | keeps the features one product | — |
 | Deferred | "Questions about my resume" option in practice setup | agreed 2026-11-05 to ship the builder first | — |
+
+## 11. v6 — optional-task gaps (agreed 2026-11-05)
+
+Review of the course's optional list against the app found four Easy/Medium gaps; items 1-2 are
+done, image generation and the LLM critique write-up follow.
+
+| Task | Choice | Why | Rejected |
+|---|---|---|---|
+| Interviewer personas (strict / neutral / friendly) and concise / detailed responses | Options in practice setup, stored on `PracticeSession`; `prompts/style/*.md` blocks appended by code to the coach and feedback prompts (`build_system_prompt`); the Prompt Lab passes neither and keeps comparing bare techniques | the five feedback variants are the Lab's subject and a course deliverable, so they stay untouched; persona and length are orthogonal to technique | editing each variant (5 x 3 x 2 files); a persona-specific technique in the Lab |
+| Evidence for the style experiment | `run_prompt_lab.py --style-sweep` (grader x 3 answers x 2 styles + judge), README table | same harness and judge as the technique comparison, so the numbers are comparable | — |
+| Interviewer guidelines | `InterviewerGuide` structured output (`interviewer_guide.md`): hiring bar, 1/3/5 anchors per dimension, green/red flags and probing questions for technical and behavioural, debrief rules. Generated on demand in the JD analyzer ("Interviewer's rubric" tab, anchored in the JD's must-have skills) and on the practice summary | makes the "structured evaluation criteria" task explicit and user-facing instead of implicit in the rubric prompt; on demand because it is a separate call (~5 cents) | generating it with every analysis |

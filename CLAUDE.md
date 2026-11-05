@@ -18,7 +18,14 @@ Four features, one dashboard, every LLM call routed through a security guard to 
   four dimensions with structured feedback, end with a summary and a retry set. Sessions are
   saved to the database after every answer (see Storage below).
 - **JD analyzer**: paste a job description → skills, likely questions, day-by-day prep plan,
-  then a hand-off button that pre-loads a practice session with the JD's questions.
+  then a hand-off button that pre-loads a practice session with the JD's questions. An
+  "Interviewer's rubric" tab generates `InterviewerGuide` (evaluation criteria) on demand; the
+  practice summary offers the same for the session's role (`features/interviewer_guide.py`).
+- **Persona and style**: practice setup picks an interviewer persona (strict / neutral /
+  friendly) and a feedback style (concise / detailed), stored on `PracticeSession`. They are
+  Markdown blocks in `llm/prompts/style/` that `features/practice.build_system_prompt` appends to
+  the coach and feedback prompts; the Prompt Lab passes neither, so the five feedback variants
+  are compared bare. README records the concise-vs-detailed sweep (`--style-sweep`).
 - **AI resume builder** (`features/resume.py`, page `ui/pages/resume_builder.py`, PLAN.md §10):
   two tabs. *My resumes*: upload PDF/DOCX/TXT or paste → text extracted locally → `resume_parse`
   structured call → `ResumeProfile` reviewed and saved (`resumes` table). *Tailored resumes*: base

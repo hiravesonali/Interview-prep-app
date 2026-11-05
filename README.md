@@ -18,6 +18,8 @@ through a **security guard** to the **OpenRouter** API.
 | LLM-as-a-judge in the Prompt Lab (cross-model judge, rubric, leaderboard column) | ✅ day 3 |
 | Developer settings: model, temperature, max tokens, guard toggle, feedback technique | ✅ day 3 |
 | Jailbreak experiment: 31 attacks and controls → `docs/jailbreak_experiment.xlsx` | ✅ day 3 |
+| Interviewer persona (strict / neutral / friendly) and feedback style (concise / detailed) in practice setup; prompt blocks appended by code, feedback variants untouched | ✅ 2026-11-05 |
+| Interviewer's rubric: structured evaluation criteria (hiring bar, 1/3/5 anchors per dimension, green and red flags, probing questions, debrief rules) in the JD analyzer and on the session summary | ✅ 2026-11-05 |
 | AI resume builder: upload base resumes (PDF/DOCX/text → structured profile), tailor one per job description, export .docx / PDF / Markdown; bullets traceable to the original, contact details never sent to the model | ✅ 2026-11-05 |
 
 ## Quick start
@@ -201,6 +203,31 @@ What the data says:
   Chain-of-thought is the runner-up when the reasoning trace itself is wanted in the UI.
 - Caveats: three answers to one question and one judge model; the leaderboard in the Lab keeps
   accumulating runs and human ratings, which is the number to trust over time.
+
+### Concise vs detailed responses
+
+The practice setup has a **Feedback style** switch. It does not touch the feedback prompts: the
+app appends `prompts/style/style_concise.md` or `style_detailed.md` to the chosen technique
+(`features/practice.build_system_prompt`), the same way the interviewer persona block is added.
+`uv run python scripts/run_prompt_lab.py --style-sweep` runs the default grader (role + rubric) on
+the three sample answers in both styles and lets the judge rate each ($0.11, 2026-11-05):
+
+| Style | Answer | Overall | Judge | Tokens | Cost | Latency | Words in feedback |
+|---|---|---|---|---|---|---|---|
+| concise | Weak | 2 | 5 | 2,171 | $0.0084 | 4.8 s | 166 |
+| concise | Mid | 2 | 4 | 2,241 | $0.0089 | 6.8 s | 189 |
+| concise | Strong | 5 | 4 | 2,413 | $0.0094 | 5.7 s | 179 |
+| detailed | Weak | 2 | 4 | 3,502 | $0.0220 | 16.5 s | 709 |
+| detailed | Mid | 2 | 4 | 3,504 | $0.0218 | 15.5 s | 757 |
+| detailed | Strong | 4 | 4 | 3,860 | $0.0242 | 19.1 s | 803 |
+
+- Concise is 4x shorter, 2.5x cheaper and 3x faster, and the judge rates it as well or better:
+  the extra words in detailed feedback are explanation, not new evidence (the same pattern the
+  judge showed for self-critique).
+- Scores barely move (one point on the strong answer), which is what the style blocks demand:
+  "the persona changes tone only, never the scale" applies to length too.
+- Detailed stays the default because the explanation is what a learner reads in guided mode;
+  concise is the right setting for a timed mock session.
 
 ### Tuning one setting: temperature
 

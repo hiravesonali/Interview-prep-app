@@ -6,12 +6,14 @@ import html
 
 import streamlit as st
 
+from interview_app.features.interviewer_guide import generate_guide
 from interview_app.features.jd_analyzer import analyze_job_description, to_question_set
 from interview_app.guard import GuardBlocked
 from interview_app.llm.client import StructuredOutputError
 from interview_app.models import JobAnalysis, QuestionType
 from interview_app.ui import state
 from interview_app.ui.components import (
+    render_interviewer_guide,
     render_question_card,
     section_header,
     show_guard_block,
@@ -118,6 +120,7 @@ def _run_analysis(jd_text: str, title: str, plan_days: int) -> None:
         st.error(f"The model did not return a valid analysis. Try again. ({err})")
         return
     st.session_state.jd_analysis = result.data
+    st.session_state.jd_guide = None
     st.toast(f"Done · {result.usage.total_tokens:,} tokens · ${result.usage.cost_usd:.4f}")
     st.rerun()
 
@@ -167,12 +170,13 @@ def _render_analysis(a: JobAnalysis) -> None:
             st.rerun()
 
     flags = f" ({len(a.red_flags)})" if a.red_flags else ""
-    tab_skills, tab_q, tab_plan, tab_ask = st.tabs(
+    tab_skills, tab_q, tab_plan, tab_ask, tab_guide = st.tabs(
         [
             f"Skills ({must_have} must-have)",
             f"Likely questions ({len(a.likely_questions)})",
             f"Prep plan ({len(a.prep_plan)} days)",
             f"Ask & flags{flags}",
+            "Interviewer's rubric",
         ]
     )
     with tab_skills:
@@ -183,6 +187,8 @@ def _render_analysis(a: JobAnalysis) -> None:
         _plan(a)
     with tab_ask:
         _ask_and_flags(a)
+    with tab_guide:
+        _interviewer_guide(a)
 
 
 def _chips(items: list[str], kind: str) -> str:
@@ -244,3 +250,36 @@ def _ask_and_flags(a: JobAnalysis) -> None:
             or '<li class="hoot-muted">None spotted in this JD.</li>'
         )
         st.html(f'<div class="hoot-card-title">🚩 Red flags</div><ul>{items}</ul>')
+
+
+def _interviewer_guide(a: JobAnalysis) -> None:
+    """Optional task: structured evaluation criteria for this loop (one call, on demand)."""
+    guide = st.session_state.get("jd_guide")
+    if guide is not None:
+        render_interviewer_guide(guide)
+        return
+    st.caption(
+        "See the interview from the other side: the hiring bar, what a 1 / 3 / 5 answer looks "
+        "like per dimension, green and red flags, and the probing questions. About 5 cents."
+    )
+    if not st.button("Generate the interviewer's rubric", type="primary", key="jd_guide_go"):
+        return
+    skills = [s for g in a.skill_groups for s in g.must_have]
+    try:
+        with st.spinner("Writing the interviewer guidelines… (20-40 s)"):
+            result = generate_guide(
+                state.pipeline(),
+                a.title,
+                a.seniority,
+                skills=skills,
+                model=state.current_model(),
+            )
+    except GuardBlocked as err:
+        show_guard_block(err)
+        return
+    except StructuredOutputError as err:
+        st.error(f"The model did not return a valid guide. Try again. ({err})")
+        return
+    st.session_state.jd_guide = result.data
+    st.toast(f"Done · {result.usage.total_tokens:,} tokens · ${result.usage.cost_usd:.4f}")
+    st.rerun()

@@ -1,0 +1,1 @@
+Response length: CONCISE. The candidate wants the short version. Every comment, strength and gap is one sentence of at most 15 words. At most 3 strengths and 3 gaps. Model answer at most 80 words. Coaching text at most 100 words. Prefer the single most important point over completeness.

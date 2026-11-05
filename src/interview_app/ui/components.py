@@ -9,7 +9,7 @@ import streamlit as st
 from interview_app.config import AVAILABLE_MODELS
 from interview_app.guard import GuardBlocked
 from interview_app.llm.prompts import list_prompts
-from interview_app.models import AnswerFeedback, Question
+from interview_app.models import AnswerFeedback, InterviewerGuide, Question
 from interview_app.ui import auth, state
 from interview_app.ui.theme import APP_NAME, APP_TAGLINE, mascot
 
@@ -261,3 +261,42 @@ def render_feedback(fb: AnswerFeedback) -> None:
         with st.expander("Model answer"):
             st.write(fb.model_answer)
         st.markdown(f"**Likely follow-up:** {fb.follow_up_question}")
+
+
+def render_interviewer_guide(g: InterviewerGuide) -> None:
+    """Evaluation criteria card: hiring bar, score anchors, flags and probes per section."""
+    with st.container(key="guide_bar"):
+        st.html(
+            '<div class="hoot-kicker">The interviewer\'s view</div>'
+            f"<h3>Hiring bar · {html.escape(g.role)} · {html.escape(g.seniority)}</h3>"
+            f"<p>{html.escape(g.hiring_bar)}</p>"
+        )
+    rows = "".join(
+        f"<tr><th>{html.escape(a.dimension)}</th><td>{html.escape(a.looks_like_1)}</td>"
+        f"<td>{html.escape(a.looks_like_3)}</td><td>{html.escape(a.looks_like_5)}</td></tr>"
+        for a in g.rubric
+    )
+    st.html(
+        '<table class="hoot-rubric"><thead><tr><th></th><th>Scores 1</th><th>Scores 3</th>'
+        f"<th>Scores 5</th></tr></thead><tbody>{rows}</tbody></table>"
+    )
+    cols = st.columns(2, gap="medium")
+    for col, section in zip(cols, g.sections, strict=False):
+        with col, st.container(key=f"guide_{section.kind}"):
+            title = "🔧 Technical questions" if section.kind == "technical" else "🤝 Behavioural"
+            st.html(
+                f'<div class="hoot-card-title">{title}</div>'
+                '<div class="hoot-flag-label">Green flags</div><ul>'
+                + "".join(f"<li>✅ {html.escape(x)}</li>" for x in section.green_flags)
+                + '</ul><div class="hoot-flag-label">Red flags</div><ul>'
+                + "".join(f"<li>🚩 {html.escape(x)}</li>" for x in section.red_flags)
+                + '</ul><div class="hoot-flag-label">Probing questions</div><ul>'
+                + "".join(f"<li>{html.escape(x)}</li>" for x in section.probing_questions)
+                + "</ul>"
+            )
+    with st.container(key="guide_rules"):
+        st.html(
+            '<div class="hoot-card-title">⚖️ Debrief rules</div><ul>'
+            + "".join(f"<li>{html.escape(r)}</li>" for r in g.decision_rules)
+            + "</ul>"
+        )
