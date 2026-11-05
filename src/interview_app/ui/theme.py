@@ -294,6 +294,51 @@ h1, h2, h3 { letter-spacing: -0.3px; }
 .st-key-lab_input { background: var(--surface); border: 1px solid var(--border); border-radius: 22px; padding: 18px 22px; margin-bottom: 10px; }
 [class*="st-key-lab_card_"] { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 12px 14px; height: 100%; }
 
+/* ---------- practice setup ---------- */
+.st-key-setup { background: var(--surface); border: 1px solid var(--border); border-radius: 22px; padding: 22px 26px 18px; }
+.hoot-step { display: flex; align-items: flex-start; gap: 12px; margin: 14px 0 2px; }
+.hoot-step:first-child { margin-top: 0; }
+.hoot-step-no { flex: none; width: 28px; height: 28px; border-radius: 999px; background: var(--accent-soft); color: var(--accent);
+  font-weight: 800; font-size: 14px; display: flex; align-items: center; justify-content: center; margin-top: 1px; }
+.hoot-step h4 { margin: 0; font-size: 18px; font-weight: 700; color: var(--ink); line-height: 1.5; }
+.hoot-step p { margin: 0; color: var(--muted); font-size: 14px; }
+.st-key-setup [data-testid="stCaptionContainer"] { margin-top: -6px; }
+
+/* ---------- jd analyzer ---------- */
+.st-key-jd_input { background: var(--surface); border: 1px solid var(--border); border-radius: 22px; padding: 22px 26px 18px; }
+.st-key-jd_input [data-testid="stCaptionContainer"] { margin-top: -6px; }
+.st-key-jd_result { background: var(--section); border-radius: 22px; padding: 22px 26px 20px; margin-bottom: 6px; }
+.st-key-jd_result h3 { margin: 4px 0 8px; font-size: 26px; line-height: 1.3; }
+.st-key-jd_result p { color: var(--ink); margin: 10px 0 14px; max-width: 70ch; }
+.hoot-badges { display: flex; gap: 8px; flex-wrap: wrap; }
+.hoot-badge { background: var(--accent); color: #fff; font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 999px;
+  text-transform: capitalize; }
+.hoot-badge.alt { background: var(--surface); color: var(--brand-deep); border: 1px solid var(--border); text-transform: none; }
+.hoot-stat { background: var(--surface); border-radius: 16px; padding: 12px 16px; margin-bottom: 14px; }
+.hoot-stat b { display: block; font-size: 26px; font-weight: 800; color: var(--ink); line-height: 1.1; }
+.hoot-stat span { font-size: 13px; color: var(--muted); }
+[class*="st-key-jd_skill_"], .st-key-jd_ask, .st-key-jd_flags { background: var(--surface); border: 1px solid var(--border);
+  border-radius: 18px; padding: 14px 18px; margin-bottom: 14px; height: 100%; }
+.hoot-card-title { font-weight: 700; font-size: 16px; color: var(--ink); margin-bottom: 8px; }
+.hoot-chips, .hoot-legend { display: flex; flex-wrap: wrap; gap: 6px; }
+.hoot-legend { margin-bottom: 12px; }
+.hoot-chip { font-size: 13px; font-weight: 600; padding: 4px 11px; border-radius: 999px; line-height: 1.3; }
+.hoot-chip.must { background: var(--accent-soft); color: var(--brand-deep); }
+.hoot-chip.nice { background: transparent; color: var(--muted); border: 1px dashed var(--border); }
+.hoot-group { font-weight: 700; font-size: 15px; color: var(--ink); margin: 14px 0 6px; }
+.hoot-group small { color: var(--muted); font-weight: 600; margin-left: 4px; }
+[class*="st-key-jd_q_"] { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 14px 18px 8px;
+  margin-bottom: 10px; }
+[class*="st-key-jd_q_"] h3 { margin: 4px 0 6px; font-size: 17px; line-height: 1.4; font-weight: 700; }
+[class*="st-key-jd_day_"] { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 12px 18px 6px;
+  margin-bottom: 10px; }
+.hoot-day { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
+.hoot-day-no { flex: none; background: var(--brand); color: #fff; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 999px; }
+.hoot-day b { font-size: 15px; color: var(--ink); }
+.st-key-jd_ask ul, .st-key-jd_flags ul { margin: 0; padding-left: 18px; color: var(--ink); }
+.st-key-jd_ask li, .st-key-jd_flags li { margin-bottom: 6px; }
+.hoot-muted { color: var(--muted); list-style: none; margin-left: -18px; }
+
 /* ---------- generic cards ---------- */
 .st-key-question_card { background: var(--section); border-radius: 22px; padding: 22px 26px; }
 .st-key-question_card h3 { margin: 4px 0 0; font-size: 22px; line-height: 1.35; }

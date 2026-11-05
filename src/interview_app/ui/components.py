@@ -219,6 +219,15 @@ def section_header(title_html: str, subtitle: str = "") -> None:
     st.html(f'<div class="hoot-section"><h2>{title_html}</h2>{sub}</div>')
 
 
+def step_header(number: int, title: str, hint: str = "") -> None:
+    """Numbered step heading used by the practice and JD setup cards (CSS: .hoot-step)."""
+    sub = f"<p>{html.escape(hint)}</p>" if hint else ""
+    st.html(
+        f'<div class="hoot-step"><span class="hoot-step-no">{number}</span>'
+        f"<div><h4>{html.escape(title)}</h4>{sub}</div></div>"
+    )
+
+
 def render_question_card(
     q: Question, *, show_details: bool = False, key: str | None = None
 ) -> None:

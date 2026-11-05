@@ -15,3 +15,9 @@ def test_feedback_variants_listed() -> None:
 
 def test_jd_prompt_days() -> None:
     assert "exactly 14 days" in render_prompt("jd_analysis", plan_days=14)
+
+
+def test_question_wording_rules_present() -> None:
+    # Both question-producing prompts carry the short, single-ask wording rule.
+    for name, kwargs in (("question_generation", {"role": "x"}), ("jd_analysis", {"plan_days": 7})):
+        assert "25 words or fewer" in render_prompt(name, **kwargs)

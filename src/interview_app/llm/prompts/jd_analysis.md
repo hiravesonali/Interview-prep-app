@@ -12,6 +12,14 @@ Phase 2, produce the JSON that matches the provided schema. Rules:
 - `title`, `seniority` (junior / mid / senior / staff / lead), `domain`, `summary` (3-4 sentences, concrete).
 - `skill_groups`: use these names when relevant and omit empty groups: "Languages", "Frameworks & libraries", "Infrastructure & tooling", "AI/ML", "Practices", "Soft skills". Put each skill in either must_have or nice_to_have, never both.
 - `likely_questions`: exactly 10 questions this interview loop would ask. Mix types: technical, system_design, behavioural, role_specific. ids 1..10. Each has `topic`, `strong_answer_covers` (3-5 points) and exactly 3 `hints` ordered from a gentle nudge to an almost-complete outline.
+- Question wording (the `question` field), written the way an interviewer says it out loud:
+  1. 25 words or fewer. One ask per question: never join two questions with "and", "also" or "then".
+  2. Plain English; expand acronyms unless very common (API, SQL, CSS, HTML). No scenarios, code or lists inside the question.
+  3. Name the actual tool, stack or responsibility from the JD ("How do you handle state in Next.js server components?"), not a generic topic ("Explain your frontend architecture").
+  4. Match the inferred seniority: junior = definitions and basics; mid = how or why something works, or a comparison; senior and above = a small real-world problem or trade-off, still in one sentence.
+  5. Behavioural questions follow "Tell me about a time..." so a STAR answer fits.
+  BAD: "Describe how you would design a secure authentication system using JWT, refresh tokens, OAuth2 and role-based access control, and explain the trade-offs."
+  GOOD: "When would you store a session in a cookie instead of a JWT?"
 - `prep_plan`: exactly {{plan_days}} days, `day` 1..{{plan_days}}. Day 1 targets the biggest skill gap for a typical candidate for this JD. Each day has a one-line `focus` and 2-4 concrete `tasks` (e.g. "Build a small rate limiter in TypeScript and explain the trade-offs aloud"). The last day is a mock interview and review.
 - `questions_to_ask`: 5 sharp questions the candidate should ask the interviewer about this role.
 - `red_flags`: 0-4 genuine concerns visible in the JD text (vague scope, too many unrelated stacks, "fast-paced" overtime signals, salary missing). Empty list if none.

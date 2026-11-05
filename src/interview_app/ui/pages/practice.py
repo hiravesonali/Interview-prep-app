@@ -13,13 +13,14 @@ from interview_app.features.practice import (
 from interview_app.guard import GuardBlocked
 from interview_app.llm.client import StructuredOutputError
 from interview_app.models import Difficulty, QuestionSet, QuestionType
-from interview_app.roles import find_role
+from interview_app.roles import find_role, load_roles
 from interview_app.ui import state
 from interview_app.ui.components import (
     render_feedback,
     render_question_card,
     section_header,
     show_guard_block,
+    step_header,
 )
 
 
@@ -36,6 +37,61 @@ def render() -> None:
 
 # ---------- setup ----------
 
+_CUSTOM_ROLE = "Custom job title…"
+_MINUTES_PER_QUESTION = 3
+_MODE_LABELS = {"guided": "Guided", "mock": "Mock interview"}
+_MODE_CAPTIONS = {
+    "guided": "A coaching tip and hints before each answer. Best for learning.",
+    "mock": "Like a real interview: questions only, scores at the end.",
+}
+_DIFFICULTY_LABELS = {"junior": "Junior", "mid": "Mid-level", "senior": "Senior"}
+_DIFFICULTY_HELP = {
+    "junior": 'definitions and basics, e.g. "What is a REST API?"',
+    "mid": "how and why things work, comparisons",
+    "senior": "small real-world problems, design decisions and trade-offs",
+}
+_TYPE_LABELS = {
+    "technical": "Technical",
+    "system_design": "System design",
+    "behavioural": "Behavioural",
+    "role_specific": "Role-specific",
+}
+
+
+def _role_picker(default: str) -> str:
+    """Preset dropdown with a custom-title escape hatch. Returns the role name ('' if none)."""
+    roles = load_roles()
+    names = [r.name for r in roles]
+    options = [*names, _CUSTOM_ROLE]
+    if default in names:
+        index: int | None = names.index(default)
+    elif default:
+        index = len(names)  # custom title coming from the dashboard or a JD analysis
+    else:
+        index = None
+    choice = st.selectbox(
+        "Role",
+        options,
+        index=index,
+        placeholder="Choose a role…",
+        format_func=lambda n: n if n == _CUSTOM_ROLE else f"{find_role(n).icon} {n}",
+        key="setup_role",
+    )
+    if choice is None:
+        return ""
+    if choice == _CUSTOM_ROLE:
+        return st.text_input(
+            "Job title",
+            value=default if default not in names else "",
+            placeholder="e.g. Mobile Developer, Solutions Architect…",
+            max_chars=120,
+            key="setup_custom_role",
+        ).strip()
+    preset = find_role(choice)
+    if preset:
+        st.caption("Topics: " + ", ".join(preset.topics))
+    return choice
+
 
 def _setup() -> None:
     pending: QuestionSet | None = st.session_state.get("pending_question_set")
@@ -44,41 +100,81 @@ def _setup() -> None:
     if pending:
         st.info(
             f"**{len(pending.questions)} questions** loaded from the job-description analysis "
-            f"for **{pending.role}**."
+            f"for **{pending.role}**. Choose how to practise and start."
         )
-    with st.form("practice_setup"):
-        role = st.text_input("Role", value=role_default, max_chars=120)
-        c1, c2 = st.columns(2)
+    with st.container(key="setup"):
+        step_header(1, "Who are you interviewing for?", "Pick a preset or type any job title.")
+        role = _role_picker(role_default)
+
+        step_header(2, "How do you want to practise?")
+        c1, c2 = st.columns(2, gap="large")
         mode = c1.radio(
             "Mode",
-            ["guided", "mock"],
-            format_func=lambda m: (
-                "Guided — coach me before each answer"
-                if m == "guided"
-                else "Mock — just ask, score at the end"
-            ),
+            list(_MODE_LABELS),
+            format_func=_MODE_LABELS.__getitem__,
+            captions=list(_MODE_CAPTIONS.values()),
+            key="setup_mode",
         )
-        difficulty = c2.select_slider(
-            "Difficulty", [d.value for d in Difficulty], value=Difficulty.MID.value
+        difficulty = (
+            c2.segmented_control(
+                "Difficulty",
+                [d.value for d in Difficulty],
+                format_func=_DIFFICULTY_LABELS.__getitem__,
+                default=Difficulty.MID.value,
+                key="setup_difficulty",
+                disabled=pending is not None,
+            )
+            or Difficulty.MID.value
         )
-        types = st.multiselect(
-            "Question types",
-            [t.value for t in QuestionType],
-            default=[t.value for t in QuestionType][:3],
-            disabled=pending is not None,
+        c2.caption(f"{_DIFFICULTY_LABELS[difficulty]}: {_DIFFICULTY_HELP[difficulty]}")
+
+        if pending:
+            step_header(3, "What to ask", "Already decided by the job description.")
+            types = [t.value for t in QuestionType]
+            count = len(pending.questions)
+        else:
+            step_header(3, "What to ask")
+            types = st.pills(
+                "Question types",
+                [t.value for t in QuestionType],
+                selection_mode="multi",
+                default=[t.value for t in QuestionType][:3],
+                format_func=_TYPE_LABELS.__getitem__,
+                key="setup_types",
+            )
+            count = st.slider(
+                "Number of questions",
+                3,
+                15,
+                10,
+                key="setup_count",
+                help=f"Plan on about {_MINUTES_PER_QUESTION} minutes per question.",
+            )
+
+        minutes = count * _MINUTES_PER_QUESTION
+        what = f"{count} {_DIFFICULTY_LABELS[difficulty].lower()} questions"
+        if role:
+            what += f" for {role}"
+        summary = f"**{what}** · {_MODE_LABELS[mode].lower()} · about {minutes} minutes"
+        st.markdown(summary)
+        go = st.button(
+            "Start practice",
+            type="primary",
+            key="setup_go",
+            disabled=not role or not types,
         )
-        count = st.slider("Number of questions", 3, 15, 10, disabled=pending is not None)
-        label = "Start with these questions" if pending else "Generate questions and start"
-        go = st.form_submit_button(label, type="primary")
+        if not role:
+            st.caption("Choose a role to start.")
+        elif not types:
+            st.caption("Pick at least one question type.")
+        elif not pending:
+            st.caption("Generating the questions takes 10-30 seconds.")
 
     if pending and st.button("Discard JD questions, generate fresh ones instead"):
         st.session_state.pending_question_set = None
         st.rerun()
 
     if not go:
-        return
-    if not role.strip():
-        st.warning("Enter a role first.")
         return
     if pending:
         qs = pending

@@ -124,6 +124,16 @@ Font: Plus Jakarta Sans (Google Fonts woff2 via `[[theme.fontFaces]]`). Sidebar:
 rest scrolls; 12px radius.
 Implementation: native Streamlit theme in `.streamlit/config.toml` + CSS targeting keyed containers;
 own sidebar menu (`st.navigation(position="hidden")` + `st.page_link`), hero and role grid on the dashboard.
+Practice setup (2026-11-05): three numbered steps instead of a flat form (role preset dropdown with a
+custom-title option and the preset's topics, mode radio with captions, difficulty as segmented buttons
+with a plain-English hint, question types as pills with human labels, slider with a time estimate, a live
+summary line and a "Start practice" button). No `st.form`, so the summary reacts to every change; no
+LLM call happens before the button.
+JD analyzer (2026-11-05): same two-step input card; results as a "role snapshot" card (badges, four stats,
+practise / analyse-another buttons) over four tabs: skills as must-have vs nice-to-have chips, questions as
+compact cards grouped by type, prep plan as day cards with task checkboxes, ask & flags in two columns.
+The JD prompt now carries the same 25-word, single-ask question wording rule and must name the JD's actual
+stack; the schema and the hand-off to practice are unchanged.
 
 ## 4. Suggestions beyond the brief (recommended, small cost)
 1. Guided vs Mock mode (F1) — mock mode is what real interviews feel like.
