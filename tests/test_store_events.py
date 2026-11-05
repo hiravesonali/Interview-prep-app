@@ -46,3 +46,11 @@ def test_plain_postgres_urls_get_the_psycopg_driver() -> None:
     assert normalize_url("postgres://u:p@h/db") == "postgresql+psycopg://u:p@h/db"
     assert normalize_url("postgresql+psycopg://u:p@h/db") == "postgresql+psycopg://u:p@h/db"
     assert normalize_url("sqlite:///data/hoot.db") == "sqlite:///data/hoot.db"
+
+
+def test_cost_today_all_users_sums_everyone() -> None:
+    engine = make_engine("sqlite://")
+    Store(engine, "alice").record_usage(Usage("m", 1, 1, 0.5, 1.0))
+    Store(engine, "bob").record_usage(Usage("m", 1, 1, 0.25, 1.0))
+    assert Store(engine, "carol").cost_today_all_users() == 0.75
+    assert Store(engine, "carol").cost_today() == 0.0

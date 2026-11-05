@@ -24,3 +24,9 @@ def test_prod_forces_the_guard_to_fail_closed() -> None:
     prod = Settings(openrouter_api_key="t", app_env="prod", guard_fail_closed=False)
     assert local.guard_fail_closed is False and not local.is_prod
     assert prod.guard_fail_closed is True and prod.is_prod
+
+
+def test_wildcard_admits_any_signed_in_account_but_not_anonymous() -> None:
+    s = Settings(openrouter_api_key="t", allowed_emails="*")
+    assert is_allowed("anyone@example.com", s.allowed_email_set)
+    assert not is_allowed(None, s.allowed_email_set) and not is_allowed("", s.allowed_email_set)

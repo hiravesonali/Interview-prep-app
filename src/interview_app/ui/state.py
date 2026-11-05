@@ -26,7 +26,13 @@ def init_state(user_id: str = LOCAL_USER) -> None:
     st.session_state.tracker = tracker
     st.session_state.security_log = log
     st.session_state.client = client
-    st.session_state.pipeline = GuardPipeline(client, settings, log, cost_today=store.cost_today)
+    st.session_state.pipeline = GuardPipeline(
+        client,
+        settings,
+        log,
+        cost_today=store.cost_today,
+        cost_today_all_users=store.cost_today_all_users,
+    )
     st.session_state.model = settings.default_model
     st.session_state.selected_role = None
     st.session_state.custom_title = ""

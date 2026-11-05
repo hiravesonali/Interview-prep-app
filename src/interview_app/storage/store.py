@@ -136,9 +136,16 @@ class Store:
 
     def cost_today(self) -> float:
         """USD spent by this user since local midnight, every model call included (guard too)."""
+        return self._cost_since_midnight(UsageEventRow.user_id == self.user_id)
+
+    def cost_today_all_users(self) -> float:
+        """USD spent by everyone since local midnight: the global cap for a public deployment."""
+        return self._cost_since_midnight()
+
+    def _cost_since_midnight(self, *conditions) -> float:
         start = datetime.combine(datetime.now().date(), time.min)
         stmt = select(func.coalesce(func.sum(UsageEventRow.cost_usd), 0.0)).where(
-            UsageEventRow.user_id == self.user_id, UsageEventRow.created_at >= start
+            UsageEventRow.created_at >= start, *conditions
         )
         with Session(self.engine) as db:
             return float(db.scalar(stmt) or 0.0)

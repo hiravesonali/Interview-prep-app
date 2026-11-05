@@ -41,8 +41,10 @@ def auth_configured() -> bool:
 
 
 def is_allowed(email: str | None, allowlist: frozenset[str]) -> bool:
-    """Pure allowlist check. An empty allowlist admits nobody: the gate fails closed."""
-    return bool(email) and email.strip().lower() in allowlist
+    """Pure allowlist check: `"*"` admits any signed-in account, an empty list admits nobody."""
+    if not email:
+        return False
+    return "*" in allowlist or email.strip().lower() in allowlist
 
 
 def signed_in_email() -> str | None:

@@ -74,8 +74,8 @@ optional `user_template` where only `{input}` is replaced with the guard-checked
 app-authored context (the question, role, etc.) never passes through the guard and braces in it
 are safe. A block raises `GuardBlocked(decision)`; pages render it with
 `components.show_guard_block`. Before any paid call, `check_budget` compares the user's spend
-since midnight (`Store.cost_today`, passed in as `cost_today=`) with `max_daily_cost_usd` and
-raises a `budget`-layer block; `max_session_cost_usd` is only the sidebar's per-session warning. `stream` runs the output guard only after the full text, so a
+since midnight (`Store.cost_today`) with `max_daily_cost_usd`, and everyone's
+(`Store.cost_today_all_users`) with `max_daily_cost_total_usd`, and raises a `budget`-layer block; `max_session_cost_usd` is only the sidebar's per-session warning. `stream` runs the output guard only after the full text, so a
 caller must be ready to replace what it already displayed. A `PermissionDeniedError` (403) from
 OpenRouter is converted into an `openrouter_guardrail` block. `pipe.overrides` (`CallOverrides`)
 carries the sidebar's temperature/max-tokens override: temperature applies to all main-model
@@ -108,7 +108,8 @@ pydantic-settings (`config.Settings`, cached by `get_settings()`).
 then `require_login`, then `init_state(current_user_id())`. The gate is active when `APP_ENV=prod`
 or an `[auth]` block exists in `.streamlit/secrets.toml` (Streamlit's built-in OIDC `st.login`,
 Google by default, needs `authlib`); otherwise the app runs as the single `local` user. Allowed
-sign-ins come from `ALLOWED_EMAILS`; an empty list admits nobody. `app_env=prod` forces
+sign-ins come from `ALLOWED_EMAILS` (`*` = any Google account, the public-demo setting); an empty
+list admits nobody. `app_env=prod` forces
 `guard_fail_closed=True` in a settings validator and refuses to run without auth. The signed-in
 email is the storage `user_id`. `.streamlit/secrets.toml.example` documents the keys.
 

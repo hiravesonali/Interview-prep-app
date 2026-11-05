@@ -27,7 +27,8 @@ class Settings(BaseSettings):
 
     # prod: sign-in required and the LLM guard fails closed (see `_prod_hardening`).
     app_env: Literal["local", "prod"] = "local"
-    # Comma-separated emails allowed to sign in. Empty = nobody (the gate fails closed).
+    # Comma-separated emails allowed to sign in; "*" = any signed-in Google account (public
+    # demo). Empty = nobody, so a misconfigured deployment stays closed.
     allowed_emails: str = ""
 
     openrouter_api_key: SecretStr = SecretStr("")
@@ -40,7 +41,8 @@ class Settings(BaseSettings):
     guard_fail_closed: bool = False
 
     max_session_cost_usd: float = 2.0  # sidebar soft limit per browser session (warning only)
-    max_daily_cost_usd: float = 5.0  # hard limit per user per day, enforced by the pipeline
+    max_daily_cost_usd: float = 2.0  # hard limit per signed-in user per day (pipeline)
+    max_daily_cost_total_usd: float = 20.0  # hard limit across all users per day (pipeline)
 
     app_title: str = "Hoot - AI Interview Prep"
     user_name: str = ""

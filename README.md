@@ -99,11 +99,16 @@ would truncate the JSON (see `CallOverrides` in `guard/pipeline.py`).
    and a spend budget on the API key in the OpenRouter dashboard. A `403` from OpenRouter is
    surfaced in the security log as `openrouter_guardrail`.
 
-5. **Daily spend cap**: every model call (the guard classifier included) is written to the
-   `usage_events` table; once a user's spend since midnight reaches `MAX_DAILY_COST_USD`
-   (default $5) the pipeline refuses further calls with a `budget` block. The sidebar's
-   per-session soft limit resets on refresh; this one does not, which is what matters once the
-   app has a public URL.
+5. **Daily spend caps**: every model call (the guard classifier included) is written to the
+   `usage_events` table. The pipeline refuses further calls with a `budget` block once a user's
+   spend since midnight reaches `MAX_DAILY_COST_USD` (default $2) or everyone's reaches
+   `MAX_DAILY_COST_TOTAL_USD` (default $20). The per-user cap bounds one person, the global cap
+   bounds the worst day of a public deployment; both are persisted, unlike the sidebar's
+   per-session soft limit. A spend limit on the OpenRouter key is the last line of defence.
+6. **Sign-in for identity, not exclusivity**: the public deployment admits any Google account
+   (`ALLOWED_EMAILS="*"`), so the reviewer or a CV reader just signs in. The identity is what
+   makes the per-user cap, private histories and the audit trail work; a comma-separated list
+   turns the same gate into a private allowlist.
 
 Every decision is recorded in the sidebar **Security log** for the current browser session and
 in the `security_events` table as a permanent audit trail. Try the **Guard playground** on
@@ -208,7 +213,8 @@ changed. Scoring stays at 0.2 (stable, reproducible verdicts); coaching keeps 0.
 
 ## Deployment
 
-Production = **Streamlit Community Cloud** (host) + **Neon** (Postgres) + Google sign-in.
+Production = **Streamlit Community Cloud** (host) + **Neon** (Postgres) + Google sign-in,
+open to any Google account (`ALLOWED_EMAILS = "*"`).
 Decisions and alternatives are in `PLAN.md` §9. Local development needs none of this: without
 an `[auth]` block the app runs as the single `local` user against `data/hoot.db`.
 
@@ -230,22 +236,23 @@ an `[auth]` block the app runs as the single `local` user against `data/hoot.db`
 
 1. Google Cloud Console → APIs & Services → Credentials → **Create credentials → OAuth client ID**,
    type **Web application**. (First time: configure the consent screen as *External*, add
-   yourself as a test user.)
+   yourself as a test user, or publish it: with only the basic openid/email/profile scopes
+   no verification is needed and any Google account can sign in.)
 2. Authorised redirect URIs: `http://localhost:8501/oauth2callback` for local tries and
    `https://YOUR-APP.streamlit.app/oauth2callback` once you know the app URL.
 3. Note the client ID and secret. Generate a cookie secret:
    `python -c "import secrets; print(secrets.token_hex(32))"`.
 
 To try sign-in locally, copy `.streamlit/secrets.toml.example` to `.streamlit/secrets.toml`
-(gitignored), fill it in and restart the server. `ALLOWED_EMAILS` must contain your Google
-address; an empty allowlist admits nobody.
+(gitignored), fill it in and restart the server. `ALLOWED_EMAILS` is `*` for any Google account
+or a comma-separated list; an empty value admits nobody.
 
 ### 3. Deploy on Community Cloud
 
 1. share.streamlit.io → **Create app** → from GitHub: this repo, branch `main`, entrypoint
    `app.py`. Community Cloud installs from `uv.lock` and defaults to Python 3.12.
 2. **Advanced settings → Secrets**: paste the filled-in contents of
-   `.streamlit/secrets.toml.example` with `APP_ENV = "prod"`, the Neon URL, your allowlist and
+   `.streamlit/secrets.toml.example` with `APP_ENV = "prod"`, the Neon URL, `ALLOWED_EMAILS = "*"` and
    the `[auth]` block with the production `redirect_uri`. Root-level keys become environment
    variables, which is how `config.Settings` reads them.
 3. Deploy, then open the URL: you should see the sign-in card, Google, then the dashboard with

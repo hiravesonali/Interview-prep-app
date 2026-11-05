@@ -119,3 +119,22 @@ def test_log_and_tracker_sinks_receive_every_entry() -> None:
     pipe.chat("sys", "hello", InputKind.ANSWER)  # input + output decisions
     tracker.add(Usage("m", 1, 1, 0.01, 0.1))
     assert [type(x).__name__ for x in seen] == ["LogEntry", "LogEntry", "Usage"]
+
+
+def test_global_daily_budget_blocks_even_when_the_user_is_under_their_cap() -> None:
+    client = FakeClient("fine")
+    log = SecurityLog()
+    client.settings.max_daily_cost_usd = 2.0
+    client.settings.max_daily_cost_total_usd = 20.0
+    pipe = GuardPipeline(
+        client,
+        client.settings,
+        log,
+        llm_guard_enabled=False,
+        cost_today=lambda: 0.1,
+        cost_today_all_users=lambda: 20.0,
+    )
+    with pytest.raises(GuardBlocked) as exc:
+        pipe.chat("sys", "hello", InputKind.ANSWER)
+    assert exc.value.decision.category == "daily_budget_total"
+    assert client.sent == []

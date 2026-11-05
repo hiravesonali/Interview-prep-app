@@ -54,13 +54,16 @@ class GuardPipeline:
         *,
         llm_guard_enabled: bool | None = None,
         cost_today: Callable[[], float] | None = None,
+        cost_today_all_users: Callable[[], float] | None = None,
     ) -> None:
-        """`cost_today` returns the user's spend so far today (USD); when given, every call is
-        refused once it reaches `settings.max_daily_cost_usd`. The app passes `Store.cost_today`."""
+        """`cost_today` returns the user's spend so far today (USD) and `cost_today_all_users`
+        everyone's; when given, calls are refused at `settings.max_daily_cost_usd` and
+        `settings.max_daily_cost_total_usd` respectively. The app passes the `Store` methods."""
         self.client = client
         self.settings = settings
         self.log = log
         self.cost_today = cost_today
+        self.cost_today_all_users = cost_today_all_users
         self.input_guard = InputGuard()
         self.output_guard = OutputGuard()
         self.llm_guard = LLMGuard(client, settings.guard_model, settings.guard_fail_closed)
@@ -72,23 +75,35 @@ class GuardPipeline:
     # ----- input side -----
 
     def check_budget(self, kind: InputKind) -> None:
-        """Daily spend cap, checked before any paid call (the classifier included).
+        """Daily spend caps, checked before any paid call (the classifier included).
 
-        The sidebar's per-session soft limit resets on refresh; this one is persisted per user,
-        which is what matters once the app has a public URL.
+        Two layers: a per-user cap bounds one person, a global cap bounds the worst day of a
+        public deployment even if someone brings many accounts. Both are persisted, unlike the
+        sidebar's per-session soft limit that resets on refresh.
         """
-        if self.cost_today is None:
-            return
-        spent, limit = self.cost_today(), self.settings.max_daily_cost_usd
-        if spent < limit:
-            return
-        decision = GuardDecision.block(
-            "budget",
-            "daily_budget",
-            f"Daily spend limit reached (${spent:.2f} of ${limit:.2f} today). Try again tomorrow.",
+        caps = (
+            (self.cost_today, self.settings.max_daily_cost_usd, "daily_budget", "Your daily"),
+            (
+                self.cost_today_all_users,
+                self.settings.max_daily_cost_total_usd,
+                "daily_budget_total",
+                "The app's daily",
+            ),
         )
-        self.log.record(decision, kind.value)
-        raise GuardBlocked(decision)
+        for read_spend, limit, category, label in caps:
+            if read_spend is None:
+                continue
+            spent = read_spend()
+            if spent < limit:
+                continue
+            decision = GuardDecision.block(
+                "budget",
+                category,
+                f"{label} spend limit is reached (${spent:.2f} of ${limit:.2f} today). "
+                "Try again tomorrow.",
+            )
+            self.log.record(decision, kind.value)
+            raise GuardBlocked(decision)
 
     def check_input(self, text: str, kind: InputKind) -> GuardDecision:
         """Budget, then rules (free), then the classifier. Returns the decision to forward."""
