@@ -237,6 +237,10 @@ h1, h2, h3 { letter-spacing: -0.3px; }
 .hoot-log { font-size: 13px; line-height: 1.4; padding: 6px 0; border-bottom: 1px solid var(--border); }
 .hoot-log small { color: var(--muted); }
 
+/* ---------- footer ---------- */
+.st-key-footer { margin-top: 56px; padding-top: 14px; border-top: 1px solid var(--border); }
+.st-key-footer a p, .st-key-footer a span { font-size: 13px; color: var(--muted); }
+
 /* ---------- hero ---------- */
 .st-key-hero { position: relative; overflow: hidden; border-radius: 28px; padding: 44px 46px 38px; color: #fff;
   background:

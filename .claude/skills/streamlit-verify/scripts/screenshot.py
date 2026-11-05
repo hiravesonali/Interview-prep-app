@@ -19,7 +19,7 @@ from pathlib import Path
 
 from playwright.sync_api import sync_playwright
 
-PAGES = {"home": "", "practice": "practice", "jd": "jd", "lab": "lab"}
+PAGES = {"home": "", "practice": "practice", "jd": "jd", "lab": "lab", "privacy": "privacy"}
 
 
 # When a sub-page URL (/practice) is opened directly, the Streamlit client first probes

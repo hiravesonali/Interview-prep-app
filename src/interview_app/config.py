@@ -30,6 +30,8 @@ class Settings(BaseSettings):
     # Comma-separated emails allowed to sign in; "*" = any signed-in Google account (public
     # demo). Empty = nobody, so a misconfigured deployment stays closed.
     allowed_emails: str = ""
+    # Shown on the public privacy page as the address for data-deletion requests.
+    privacy_contact_email: str = "hiravesonali@gmail.com"
 
     openrouter_api_key: SecretStr = SecretStr("")
     openrouter_base_url: str = "https://openrouter.ai/api/v1"

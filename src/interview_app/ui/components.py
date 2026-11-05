@@ -156,6 +156,12 @@ def render_sidebar_dynamic() -> None:
         render_security_log()
 
 
+def render_footer() -> None:
+    """One-line footer under every signed-in page with the public privacy policy link."""
+    with st.container(key="footer", horizontal_alignment="center"):
+        st.page_link(st.session_state.pages["privacy"], label="Hoot · Privacy policy", icon="🦉")
+
+
 def render_cost_card() -> None:
     t = state.tracker()
     limit = state.settings().max_session_cost_usd

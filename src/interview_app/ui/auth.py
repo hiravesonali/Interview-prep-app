@@ -12,6 +12,7 @@ import html
 import os
 
 import streamlit as st
+from streamlit.navigation.page import StreamlitPage
 
 from interview_app.config import Settings
 from interview_app.storage.store import LOCAL_USER
@@ -57,15 +58,18 @@ def current_user_id() -> str:
     return signed_in_email() or LOCAL_USER
 
 
-def require_login(settings: Settings) -> None:
-    """Stop the script run until an allowed user is signed in. No-op in local mode."""
+def require_login(settings: Settings, privacy_page: StreamlitPage | None = None) -> None:
+    """Stop the script run until an allowed user is signed in. No-op in local mode.
+
+    `privacy_page` is linked from the sign-in card so the policy is reachable before sign-in.
+    """
     if not auth_configured():
         if settings.is_prod:
             st.error("APP_ENV=prod but no [auth] block in secrets.toml: refusing to run open.")
             st.stop()
         return
     if not st.user.get("is_logged_in"):
-        _sign_in_screen()
+        _sign_in_screen(privacy_page)
         st.stop()
     if not is_allowed(st.user.get("email"), settings.allowed_email_set):
         st.warning(
@@ -77,7 +81,7 @@ def require_login(settings: Settings) -> None:
         st.stop()
 
 
-def _sign_in_screen() -> None:
+def _sign_in_screen(privacy_page: StreamlitPage | None) -> None:
     _, col, _ = st.columns([1, 2, 1])
     with col:
         st.html(
@@ -87,3 +91,5 @@ def _sign_in_screen() -> None:
         )
         if st.button("Sign in with Google", type="primary", width="stretch"):
             st.login()
+        if privacy_page is not None:
+            st.page_link(privacy_page, label="Privacy policy", icon="🔒")
