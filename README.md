@@ -239,7 +239,7 @@ an `[auth]` block the app runs as the single `local` user against `data/hoot.db`
    yourself as a test user, or publish it: with only the basic openid/email/profile scopes
    no verification is needed and any Google account can sign in. Publishing asks for a
    privacy-policy URL: the app serves one at `https://YOUR-APP.streamlit.app/privacy`,
-   readable without sign-in; `PRIVACY_CONTACT_EMAIL` is the address it shows.)
+   readable without sign-in.)
 2. Authorised redirect URIs: `http://localhost:8501/oauth2callback` for local tries and
    `https://YOUR-APP.streamlit.app/oauth2callback` once you know the app URL.
 3. Note the client ID and secret. Generate a cookie secret:
