@@ -205,3 +205,21 @@ URL works from Community Cloud without the IPv4 pooler detour. Switching is one 
 
 Migration: a one-off script imports the existing `data/sessions/*.json` and `data/prompt_lab.json`
 into the database so the Sprint 1 history and the Prompt Lab results (a course deliverable) survive.
+
+## 10. v5 — AI resume builder (agreed 2026-11-05)
+
+Context: the three features cover questions and job descriptions but not the document the
+candidate actually sends. huru.ai's "AI Resume Intelligence" (upload base resumes, generate a
+tailored version per application) is the model for the flow; the UI follows Hoot's own design.
+
+| Decision | Choice | Why | Rejected |
+|---|---|---|---|
+| Shape | One page, two tabs: **My resumes** (uploaded base resumes, parsed into a structured profile) and **Tailored resumes** (one per job, built from a base resume plus a JD) | matches how people apply: few base resumes, many tailored copies | a free-form "resume chat" (no reuse, nothing to list) |
+| Parsing | Upload PDF / DOCX / TXT or paste; text is extracted locally (`pypdf`, `python-docx`), then one structured call turns it into `ResumeProfile`; the user reviews before saving | tailoring edits bullets, not blobs; the profile renders consistently and diffs cleanly | storing the file (bigger DB, nothing to query, more to delete) |
+| Contact details | Pulled locally with regex and stored in the profile; the guard's PII redaction strips emails and phones from what goes to the model | the model never needs them; the existing guard already does the work | sending them through and trusting the model |
+| No fabrication | Every tailored bullet carries `source_ids` of the original bullets; Python flags bullets without a source as "verify" and counts them; missing skills go to a gaps list | an honesty rule enforced in code, not in prose, is checkable in the review | asking the prompt nicely |
+| Match score | The model tags each JD keyword `present` / `added` / `missing`; the before/after score is a Python ratio over that list | the number is auditable, not generated | a model-reported percentage |
+| Storage | Two document-with-index tables, `resumes` and `tailored_resumes`; first `delete_*` methods in `Store` with a confirm step in the UI | same pattern as sessions | — |
+| Export | `.docx` (`python-docx`), PDF (`reportlab`, standard fonts) and Markdown | the file people actually send | WeasyPrint (needs system libraries, breaks on Community Cloud) |
+| Hand-offs | JD analyzer → "Tailor my resume for this JD"; tailored resume → "Prepare for this interview" prefills the JD analyzer | keeps the features one product | — |
+| Deferred | "Questions about my resume" option in practice setup | agreed 2026-11-05 to ship the builder first | — |

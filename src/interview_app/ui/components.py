@@ -28,6 +28,7 @@ NAV: dict[str, tuple[str, str]] = {
     "home": ("Dashboard", "🏠"),
     "practice": ("Practice session", "🗣️"),
     "jd": ("JD analyzer", "📄"),
+    "resume": ("AI resume builder", "📝"),
 }
 DEV_NAV: dict[str, tuple[str, str]] = {"lab": ("Prompt Lab", "🧪")}
 

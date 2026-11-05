@@ -23,6 +23,7 @@ MAX_CHARS: dict[InputKind, int] = {
     InputKind.JOB_DESCRIPTION: 12000,
     InputKind.TITLE: 120,
     InputKind.FREE_TEXT: 4000,
+    InputKind.RESUME: 15000,
 }
 
 _ZERO_WIDTH = re.compile(r"[​-‏⁠﻿]")

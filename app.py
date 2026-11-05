@@ -20,7 +20,14 @@ from interview_app.ui.components import (  # noqa: E402
     render_sidebar_controls,
     render_sidebar_dynamic,
 )
-from interview_app.ui.pages import home, jd_analyzer, practice, privacy, prompt_lab  # noqa: E402
+from interview_app.ui.pages import (  # noqa: E402
+    home,
+    jd_analyzer,
+    practice,
+    privacy,
+    prompt_lab,
+    resume_builder,
+)
 from interview_app.ui.theme import CSS  # noqa: E402
 
 PUBLIC_PAGES = frozenset({"privacy"})
@@ -38,6 +45,9 @@ pages = {
     "home": st.Page(home.render, title="Dashboard", icon="🏠", default=True),
     "practice": st.Page(practice.render, title="Practice session", icon="🗣️", url_path="practice"),
     "jd": st.Page(jd_analyzer.render, title="JD analyzer", icon="📄", url_path="jd"),
+    "resume": st.Page(
+        resume_builder.render, title="AI resume builder", icon="📝", url_path="resume"
+    ),
     "lab": st.Page(prompt_lab.render, title="Prompt Lab", icon="🧪", url_path="lab"),
     "privacy": st.Page(privacy.render, title="Privacy policy", icon="🔒", url_path="privacy"),
 }

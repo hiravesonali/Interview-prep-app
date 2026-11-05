@@ -18,6 +18,7 @@ through a **security guard** to the **OpenRouter** API.
 | LLM-as-a-judge in the Prompt Lab (cross-model judge, rubric, leaderboard column) | ✅ day 3 |
 | Developer settings: model, temperature, max tokens, guard toggle, feedback technique | ✅ day 3 |
 | Jailbreak experiment: 31 attacks and controls → `docs/jailbreak_experiment.xlsx` | ✅ day 3 |
+| AI resume builder: upload base resumes (PDF/DOCX/text → structured profile), tailor one per job description, export .docx / PDF / Markdown; bullets traceable to the original, contact details never sent to the model | ✅ 2026-11-05 |
 
 ## Quick start
 
@@ -50,7 +51,10 @@ Streamlit pages ──► features ──► GuardPipeline ──► OpenRouter 
 - `src/interview_app/llm/prompts/` — system prompts as Markdown files, loaded by name.
 - `src/interview_app/models.py` — pydantic schemas for every structured call.
 - `src/interview_app/features/` — `jd_analyzer.py`, `practice.py` (session state machine + LLM
-  operations) and `prompt_lab.py` (parallel comparison of prompt variants).
+  operations), `prompt_lab.py` (parallel comparison of prompt variants), `resume.py` (parse a
+  base resume, tailor it to a JD; contact details extracted locally, every tailored bullet
+  checked against the source bullet ids, match score computed from the keyword list) and
+  `resume_export.py` (.docx via python-docx, PDF via reportlab, Markdown).
 - `src/interview_app/storage/` — `db.py` (SQLAlchemy engine + tables; `DATABASE_URL` picks SQLite
   locally, Postgres in production), `store.py` (every read/write, scoped to one user; sessions are
   saved after each answer and resumable from the dashboard), `import_json.py` (one-off import of

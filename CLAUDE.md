@@ -11,7 +11,7 @@ and owned by her. `PLAN.md` is the approved architecture and delivery plan and i
 truth for decisions; `README.md` is the user-facing description (features, security design,
 prompt-technique findings).
 
-Three features, one dashboard, every LLM call routed through a security guard to OpenRouter:
+Four features, one dashboard, every LLM call routed through a security guard to OpenRouter:
 
 - **Practice session**: generate ~10 questions for a role (or take them from a JD analysis), ask
   one at a time in guided mode (streamed coaching + hints) or mock mode, score each answer on
@@ -19,6 +19,15 @@ Three features, one dashboard, every LLM call routed through a security guard to
   saved to the database after every answer (see Storage below).
 - **JD analyzer**: paste a job description → skills, likely questions, day-by-day prep plan,
   then a hand-off button that pre-loads a practice session with the JD's questions.
+- **AI resume builder** (`features/resume.py`, page `ui/pages/resume_builder.py`, PLAN.md §10):
+  two tabs. *My resumes*: upload PDF/DOCX/TXT or paste → text extracted locally → `resume_parse`
+  structured call → `ResumeProfile` reviewed and saved (`resumes` table). *Tailored resumes*: base
+  resume + JD → `resume_tailor` call → `TailoredResume` saved per job (`tailored_resumes`).
+  Three rules live in code, not prompts: contact details come from local regexes (the guard
+  redacts email/phone before the model), every tailored bullet needs `source_ids` from the base
+  (`unverified_bullets` flags the rest), and the match score is `match_scores` over the keyword
+  list. Exports: .docx (python-docx), PDF (reportlab, standard fonts), Markdown
+  (`features/resume_export.py`). Hand-offs: JD analyzer → tailor; tailored resume → JD analyzer.
 - **Prompt Lab** (developer tool, linked from the sidebar's Developer settings expander, not the
   main menu): the course requirement "5 system prompts with different techniques, compare
   them". Five feedback prompts (zero-shot, few-shot, chain-of-thought, role+rubric,
@@ -136,7 +145,8 @@ internals, so verify in the browser after upgrading Streamlit.
 **Storage** (`storage/`): SQLAlchemy 2.x, `DATABASE_URL` selects the engine (`sqlite:///data/hoot.db`
 locally, Neon's `postgresql://…` URL in production (`normalize_url` pins `+psycopg`), `sqlite://` in tests). Tables are "document with
 index": a few scalar columns for listing plus a JSON `payload` holding the full pydantic dump, and
-every row has a `user_id` (`LOCAL_USER = "local"` until sign-in lands). `Store` (from
+every row has a `user_id` (`LOCAL_USER = "local"` until sign-in lands). Tables: `sessions`,
+`prompt_lab_runs`, `security_events`, `usage_events`, `resumes`, `tailored_resumes`. `Store` (from
 `ui.state.store()` in pages, `open_store(settings)` in scripts) is the only module that touches
 SQLAlchemy; `PracticeSession.id` is the upsert key, so saving after every answer updates one row.
 `SecurityLog` and `UsageTracker` take a `sink` callback; `init_state` wires them to

@@ -35,13 +35,16 @@ def _hero() -> None:
                 "revise. Every prompt passes a security guard before it reaches the model.</p>"
                 '<span class="hoot-chip">🧭 Guided or mock mode</span>'
                 '<span class="hoot-chip">📊 Scored feedback</span>'
-                '<span class="hoot-chip">📄 Questions from a real job description</span></div>'
+                '<span class="hoot-chip">📄 Questions from a real job description</span>'
+                '<span class="hoot-chip">📝 Resume tailored per job</span></div>'
             )
-            b1, b2, _ = st.columns([1.3, 1.4, 1.5])
+            b1, b2, b3 = st.columns([1.2, 1.4, 1.3])
             if b1.button("Start practising  →", key="hero_primary", width="stretch"):
                 st.switch_page(st.session_state.pages["practice"])
             if b2.button("📄  Use a job description", key="hero_secondary", width="stretch"):
                 st.switch_page(st.session_state.pages["jd"])
+            if b3.button("📝  Tailor my resume", key="hero_resume", width="stretch"):
+                st.switch_page(st.session_state.pages["resume"])
         with right:
             st.html(
                 '<div class="hoot-chat">'

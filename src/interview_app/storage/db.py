@@ -90,6 +90,34 @@ class UsageEventRow(Base):
     cost_usd: Mapped[float] = mapped_column(Float)
 
 
+class ResumeRow(Base):
+    """One uploaded base resume; `payload` is the `BaseResume` (raw text + parsed profile)."""
+
+    __tablename__ = "resumes"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True)
+    user_id: Mapped[str] = mapped_column(String(320), index=True)
+    name: Mapped[str] = mapped_column(String(120))
+    headline: Mapped[str] = mapped_column(String(200))
+    created_at: Mapped[datetime] = mapped_column(DateTime, index=True)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON)
+
+
+class TailoredResumeRow(Base):
+    """One tailored resume per job application; `payload` is the `TailoredResumeDoc`."""
+
+    __tablename__ = "tailored_resumes"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True)
+    user_id: Mapped[str] = mapped_column(String(320), index=True)
+    base_resume_id: Mapped[str] = mapped_column(String(32), index=True)
+    job_title: Mapped[str] = mapped_column(String(200))
+    company: Mapped[str] = mapped_column(String(200))
+    match_score: Mapped[int] = mapped_column(Integer)
+    created_at: Mapped[datetime] = mapped_column(DateTime, index=True)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON)
+
+
 def normalize_url(url: str) -> str:
     """Accept a plain Postgres URL (what Neon and most hosts hand out) and pin the psycopg driver.
 

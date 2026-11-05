@@ -15,6 +15,7 @@ class InputKind(StrEnum):
     JOB_DESCRIPTION = "job_description"
     TITLE = "title"
     FREE_TEXT = "free_text"
+    RESUME = "resume"
 
 
 @dataclass(frozen=True)

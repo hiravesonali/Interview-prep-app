@@ -45,6 +45,7 @@ actually look at them.
 | home | `/` | hero card with two buttons, role grid, recent sessions, playground |
 | practice | `/practice` | role selector or question card (`st-key-question_card`), mode toggle |
 | jd | `/jd` | text area and analyse button; results cards after a run |
+| resume | `/resume` | tab control, list header with primary button, dashed empty state (`st-key-rb_empty`) or cards (`st-key-rb_card_*`); seed a scratch DB with `tests/test_resume.py` fixtures to see the open views and the paper preview (`st-key-rb_preview`) |
 | lab | `/lab` | input card (`st-key-lab_input`), Options expander, Run button, leaderboard table; technique cards only after a run |
 
 On every page also check the sidebar: owl brand stays pinned at the top when the page scrolls,

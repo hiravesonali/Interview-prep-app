@@ -144,7 +144,7 @@ def _render_analysis(a: JobAnalysis) -> None:
         ]
         for col, (n, label) in zip(st.columns(4), stats, strict=True):
             col.html(f'<div class="hoot-stat"><b>{n}</b><span>{label}</span></div>')
-        b1, b2 = st.columns([1, 1])
+        b1, b2, b3 = st.columns([1.3, 1.2, 1])
         if b1.button(
             f"🗣️ Practise these {len(a.likely_questions)} questions",
             type="primary",
@@ -154,7 +154,15 @@ def _render_analysis(a: JobAnalysis) -> None:
             st.session_state.pending_question_set = to_question_set(a)
             st.session_state.practice = None
             st.switch_page(st.session_state.pages["practice"])
-        if b2.button("Analyse another JD", key="jd_reset", width="stretch"):
+        if b2.button("📝 Tailor my resume for this JD", key="jd_tailor", width="stretch"):
+            st.session_state.rb_prefill = {
+                "jd_text": st.session_state.get("jd_last_text", ""),
+                "job_title": a.title,
+            }
+            st.session_state.rb_tab = "tailored"
+            st.session_state.rb_screen = ("new", None)
+            st.switch_page(st.session_state.pages["resume"])
+        if b3.button("Analyse another JD", key="jd_reset", width="stretch"):
             st.session_state.jd_analysis = None
             st.rerun()
 

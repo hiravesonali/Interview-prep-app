@@ -41,6 +41,11 @@ def init_state(user_id: str = LOCAL_USER) -> None:
     st.session_state.practice = None
     st.session_state.pending_question_set = None
     st.session_state.jd_analysis = None
+    # AI resume builder (see ui/pages/resume_builder.py for what each key means)
+    st.session_state.rb_tab = "tailored"
+    st.session_state.rb_screen = None
+    st.session_state.rb_draft = None
+    st.session_state.rb_prefill = None
 
 
 def pipeline() -> GuardPipeline:

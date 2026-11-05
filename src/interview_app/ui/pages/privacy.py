@@ -21,12 +21,16 @@ not a commercial service.
   sessions separate from other users'.
 - The text you enter (answers, job descriptions) and the questions, scores and feedback
   generated for you, so that you can revisit past sessions.
+- Resumes you upload or paste: the extracted text and the parsed sections, plus the tailored
+  versions built from them. The uploaded file itself is not kept. You can delete any resume
+  from the AI resume builder page at any time.
 - Basic usage records needed to keep the project's AI spending within its limits.
 
 ### How it is used
 
-- Your text is sent to third-party AI models to generate questions and feedback. It is not used
-  for advertising, sold, or shared for any other purpose.
+- Your text is sent to third-party AI models to generate questions, feedback and tailored
+  resumes. Email addresses and phone numbers are removed before sending. It is not used for
+  advertising, sold, or shared for any other purpose.
 - The app sets only the cookies needed to keep you signed in. There are no advertising or
   tracking cookies.
 

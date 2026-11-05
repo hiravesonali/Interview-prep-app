@@ -14,16 +14,19 @@ from sqlalchemy.orm import Session
 
 from interview_app.config import Settings
 from interview_app.features.practice import PracticeSession
+from interview_app.features.resume import BaseResume, TailoredResumeDoc, match_scores
 from interview_app.guard.log import LogEntry
 from interview_app.llm.client import Usage
 from interview_app.storage.db import (
     LabRunRow,
+    ResumeRow,
     SecurityEventRow,
     SessionRow,
+    TailoredResumeRow,
     UsageEventRow,
     get_engine,
 )
-from interview_app.storage.history import SessionSummary
+from interview_app.storage.history import ResumeSummary, SessionSummary, TailoredSummary
 from interview_app.storage.prompt_lab import LabRecord
 
 LOCAL_USER = "local"  # user id when the app runs without sign-in
@@ -102,6 +105,96 @@ class Store:
         stmt = select(LabRunRow).where(LabRunRow.user_id == self.user_id).order_by(LabRunRow.id)
         with Session(self.engine) as db:
             return [LabRecord(**r.payload) for r in db.scalars(stmt)]
+
+    # ----- resume builder -----
+
+    def save_resume(self, resume: BaseResume) -> str:
+        with Session(self.engine) as db, db.begin():
+            row = db.get(ResumeRow, resume.id)
+            if row is None:
+                row = ResumeRow(id=resume.id, user_id=self.user_id)
+                db.add(row)
+            elif row.user_id != self.user_id:
+                raise KeyError(resume.id)
+            row.name = resume.name
+            row.headline = resume.profile.headline
+            row.created_at = resume.created_at
+            row.payload = resume.model_dump(mode="json")
+        return resume.id
+
+    def load_resume(self, resume_id: str) -> BaseResume:
+        with Session(self.engine) as db:
+            row = db.get(ResumeRow, resume_id)
+            if row is None or row.user_id != self.user_id:
+                raise KeyError(resume_id)
+            return BaseResume.model_validate(row.payload)
+
+    def list_resumes(self) -> list[ResumeSummary]:
+        stmt = (
+            select(ResumeRow)
+            .where(ResumeRow.user_id == self.user_id)
+            .order_by(ResumeRow.created_at.desc())
+        )
+        with Session(self.engine) as db:
+            return [
+                ResumeSummary(id=r.id, name=r.name, headline=r.headline, created_at=r.created_at)
+                for r in db.scalars(stmt)
+            ]
+
+    def delete_resume(self, resume_id: str) -> None:
+        """Deletes the base resume only; tailored copies keep their profile snapshot."""
+        with Session(self.engine) as db, db.begin():
+            row = db.get(ResumeRow, resume_id)
+            if row is not None and row.user_id == self.user_id:
+                db.delete(row)
+
+    def save_tailored(self, doc: TailoredResumeDoc) -> str:
+        with Session(self.engine) as db, db.begin():
+            row = db.get(TailoredResumeRow, doc.id)
+            if row is None:
+                row = TailoredResumeRow(id=doc.id, user_id=self.user_id)
+                db.add(row)
+            elif row.user_id != self.user_id:
+                raise KeyError(doc.id)
+            row.base_resume_id = doc.base_resume_id
+            row.job_title = doc.job_title
+            row.company = doc.company
+            row.match_score = match_scores(doc.result)[1]
+            row.created_at = doc.created_at
+            row.payload = doc.model_dump(mode="json")
+        return doc.id
+
+    def load_tailored(self, doc_id: str) -> TailoredResumeDoc:
+        with Session(self.engine) as db:
+            row = db.get(TailoredResumeRow, doc_id)
+            if row is None or row.user_id != self.user_id:
+                raise KeyError(doc_id)
+            return TailoredResumeDoc.model_validate(row.payload)
+
+    def list_tailored(self) -> list[TailoredSummary]:
+        stmt = (
+            select(TailoredResumeRow)
+            .where(TailoredResumeRow.user_id == self.user_id)
+            .order_by(TailoredResumeRow.created_at.desc())
+        )
+        with Session(self.engine) as db:
+            return [
+                TailoredSummary(
+                    id=r.id,
+                    base_resume_id=r.base_resume_id,
+                    job_title=r.job_title,
+                    company=r.company,
+                    match_score=r.match_score,
+                    created_at=r.created_at,
+                )
+                for r in db.scalars(stmt)
+            ]
+
+    def delete_tailored(self, doc_id: str) -> None:
+        with Session(self.engine) as db, db.begin():
+            row = db.get(TailoredResumeRow, doc_id)
+            if row is not None and row.user_id == self.user_id:
+                db.delete(row)
 
     # ----- audit trail and spend (sinks for SecurityLog / UsageTracker, see ui.state) -----
 
