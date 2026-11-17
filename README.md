@@ -7,6 +7,7 @@ through a **security guard** to the **OpenRouter** API. The Prompt Lab, the jail
 the LLM critique are course deliverables, kept under Developer settings and `docs/`.
 
 > Sprint 1 (Turing College AI Engineering). Architecture and delivery plan: [PLAN.md](PLAN.md).
+> Source: [github.com/hiravesonali/Interview-prep-app](https://github.com/hiravesonali/Interview-prep-app).
 
 ## Features
 
