@@ -102,12 +102,18 @@ def render_sidebar_controls(active: str) -> None:
             )
         if auth.signed_in_email() and st.button("Sign out", width="stretch"):
             st.logout()
+        if auth.is_guest():
+            st.caption("Guest data is deleted within 24 hours. Sign in to keep your history.")
+            if st.button("Sign in with Google", width="stretch"):
+                st.login()
 
 
 def _identity(s) -> tuple[str, str]:
-    """Signed-in Google identity when the gate is active, else the .env USER_NAME/USER_EMAIL."""
+    """Signed-in Google identity, "Guest" for guests, else the .env USER_NAME/USER_EMAIL."""
     if email := auth.signed_in_email():
         return st.user.get("name") or email.split("@")[0], email
+    if auth.is_guest():
+        return "Guest", "Guest demo"
     return s.user_name, s.user_email
 
 

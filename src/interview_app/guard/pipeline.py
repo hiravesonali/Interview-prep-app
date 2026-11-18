@@ -61,15 +61,19 @@ class GuardPipeline:
         llm_guard_enabled: bool | None = None,
         cost_today: Callable[[], float] | None = None,
         cost_today_all_users: Callable[[], float] | None = None,
+        cost_today_guests: Callable[[], float] | None = None,
     ) -> None:
         """`cost_today` returns the user's spend so far today (USD) and `cost_today_all_users`
         everyone's; when given, calls are refused at `settings.max_daily_cost_usd` and
-        `settings.max_daily_cost_total_usd` respectively. The app passes the `Store` methods."""
+        `settings.max_daily_cost_total_usd` respectively. `cost_today_guests` (all guests'
+        spend, capped at `settings.max_daily_cost_guest_usd`) is passed only for guest users.
+        The app passes the `Store` methods."""
         self.client = client
         self.settings = settings
         self.log = log
         self.cost_today = cost_today
         self.cost_today_all_users = cost_today_all_users
+        self.cost_today_guests = cost_today_guests
         self.input_guard = InputGuard()
         self.output_guard = OutputGuard()
         self.llm_guard = LLMGuard(client, settings.guard_model, settings.guard_fail_closed)
@@ -83,12 +87,19 @@ class GuardPipeline:
     def check_budget(self, kind: InputKind) -> None:
         """Daily spend caps, checked before any paid call (the classifier included).
 
-        Two layers: a per-user cap bounds one person, a global cap bounds the worst day of a
-        public deployment even if someone brings many accounts. Both are persisted, unlike the
-        sidebar's per-session soft limit that resets on refresh.
+        Three layers: a per-user cap bounds one person, a guest cap bounds all guests together
+        (a guest gets a new id on every refresh, so the per-user cap alone cannot), and a global
+        cap bounds the worst day of a public deployment even if someone brings many accounts.
+        All are persisted, unlike the sidebar's per-session soft limit that resets on refresh.
         """
         caps = (
             (self.cost_today, self.settings.max_daily_cost_usd, "daily_budget", "Your daily"),
+            (
+                self.cost_today_guests,
+                self.settings.max_daily_cost_guest_usd,
+                "daily_budget_guest",
+                "The guest demo's daily",
+            ),
             (
                 self.cost_today_all_users,
                 self.settings.max_daily_cost_total_usd,

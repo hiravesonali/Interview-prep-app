@@ -236,3 +236,19 @@ done, image generation and the LLM critique write-up follow.
 | Interviewer guidelines | `InterviewerGuide` structured output (`interviewer_guide.md`): hiring bar, 1/3/5 anchors per dimension, green/red flags and probing questions for technical and behavioural, debrief rules. Generated on demand in the JD analyzer ("Interviewer's rubric" tab, anchored in the JD's must-have skills) and on the practice summary | makes the "structured evaluation criteria" task explicit and user-facing instead of implicit in the rubric prompt; on demand because it is a separate call (~5 cents) | generating it with every analysis |
 | Image generation | Interviewer portraits: one per persona via `google/gemini-3.1-flash-image` on `/chat/completions` (`modalities=["image","text"]`), behind `GuardPipeline.image` (budget guard, cost ledger), shrunk to 384 px WebP with Pillow and cached in a shared `images` table; emoji fallback on refusal or allowlist 403 | the image has a job (the persona now has a face) and the cost is bounded to three calls total | a decorative hero image; per-session generation (~$0.07 each); storing the 1 MB originals |
 | LLM critique | `scripts/llm_critique.py` sends README, guard, prompts and the practice feature as data through the pipeline to the main model with `prompts/critique.md`; result committed as `docs/llm_critique.md` plus a hand-written "What we changed" section | a reproducible, versioned artefact instead of a chat transcript; the same guard and ledger as the app | pasting the repo into a chat window |
+
+## 12. v7 — guest demo access (agreed 2026-11-18)
+
+Goal: a CV reader or reviewer opens the link and uses the whole app without a Google account.
+§9 rejected "no sign-in at all" because users become indistinguishable (shared histories, no
+per-user cap, anonymous attacks); this design answers each of those instead of dropping sign-in.
+
+| Decision | Choice | Why | Rejected |
+|---|---|---|---|
+| Entry | "Try as guest (no account)" under "Sign in with Google" on the sign-in card, behind `GUEST_MODE_ENABLED` (default off) | sign-in stays the main path; the demo can be switched off in secrets without a deploy | removing the gate; a separate demo deployment |
+| Identity | random `guest-<16 hex>` user id per browser session (`st.session_state`), passed to `init_state` like an email | guests never see each other's data; resumes hold personal data, so one shared `guest` user would leak it between visitors | a shared `guest` user; the id in the URL (a shared link would expose the data) |
+| Lifetime | the id dies with the tab: a refresh starts a new guest | no cookie or URL handling; honest about what a demo keeps | persisting the id in a cookie |
+| Cost | third cap in `check_budget`, `MAX_DAILY_COST_GUEST_USD` (default $3) over all `guest-%` rows of `usage_events`; per-user ($2) and global ($20) caps still apply | a refresh mints a new id, so the per-user cap alone does not bound guests | a per-guest cap only |
+| Retention | each new guest session runs `Store.purge_guest_data(24 h)`: deletes guest sessions, Prompt Lab runs, resumes and tailored resumes older than 24 h; `usage_events` and `security_events` stay | no scheduler on Community Cloud; the ledger feeds the caps and the audit trail | a cron job; keeping guest data |
+| Features | the whole app, Prompt Lab included (~$0.26 per run, inside the guest cap) | the Lab is a course deliverable worth showing | hiding Developer settings for guests |
+| Privacy | privacy page gets a "Guest demo" section | Google's consent screen links to it; guests should know what is kept | — |

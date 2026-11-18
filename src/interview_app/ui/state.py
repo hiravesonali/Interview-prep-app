@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+from datetime import timedelta
+
 import streamlit as st
 
 from interview_app.config import Settings, get_settings
 from interview_app.guard import GuardPipeline, SecurityLog
 from interview_app.llm.client import OpenRouterClient, UsageTracker
-from interview_app.storage.store import LOCAL_USER, Store, open_store
+from interview_app.storage.store import LOCAL_USER, Store, is_guest_id, open_store
 
 
 def init_state(user_id: str = LOCAL_USER) -> None:
@@ -16,6 +18,10 @@ def init_state(user_id: str = LOCAL_USER) -> None:
         return
     settings: Settings = get_settings()
     store = open_store(settings, user_id)
+    guest = is_guest_id(user_id)
+    if guest:
+        # Each new guest sweeps out older guests' data, so no scheduler is needed.
+        store.purge_guest_data(timedelta(hours=settings.guest_retention_hours))
     # The in-memory tracker and log feed the sidebar for this browser session; their sinks
     # persist every call and guard decision (daily spend cap, audit trail).
     tracker = UsageTracker(sink=store.record_usage)
@@ -32,6 +38,7 @@ def init_state(user_id: str = LOCAL_USER) -> None:
         log,
         cost_today=store.cost_today,
         cost_today_all_users=store.cost_today_all_users,
+        cost_today_guests=store.cost_today_guests if guest else None,
     )
     st.session_state.model = settings.default_model
     st.session_state.selected_role = None

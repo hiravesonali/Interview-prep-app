@@ -6,7 +6,7 @@ import streamlit as st
 
 from interview_app.ui.theme import APP_NAME
 
-LAST_UPDATED = "5 November 2026"
+LAST_UPDATED = "18 November 2026"
 PROJECT_URL = "https://github.com/hiravesonali/Interview-prep-app"
 
 _POLICY = """
@@ -25,6 +25,13 @@ not a commercial service.
   versions built from them. The uploaded file itself is not kept. You can delete any resume
   from the AI resume builder page at any time.
 - Basic usage records needed to keep the project's AI spending within its limits.
+
+### Guest demo
+
+If you choose "Try as guest", no account details are collected. Your work is stored under a
+random guest id that only your current browser tab knows; it is gone for you when you refresh
+or close the tab, and deleted from the server within 24 hours. Usage and security records
+(cost per AI call, blocked inputs) are kept to enforce the spending limits and detect abuse.
 
 ### How it is used
 

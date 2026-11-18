@@ -30,6 +30,10 @@ class Settings(BaseSettings):
     # Comma-separated emails allowed to sign in; "*" = any signed-in Google account (public
     # demo). Empty = nobody, so a misconfigured deployment stays closed.
     allowed_emails: str = ""
+    # Show "Try as guest" on the sign-in card: no account, a random per-browser-session user id,
+    # data purged after `guest_retention_hours`, spend bounded by `max_daily_cost_guest_usd`.
+    guest_mode_enabled: bool = False
+    guest_retention_hours: int = 24
 
     openrouter_api_key: SecretStr = SecretStr("")
     openrouter_base_url: str = "https://openrouter.ai/api/v1"
@@ -44,6 +48,7 @@ class Settings(BaseSettings):
     max_session_cost_usd: float = 2.0  # sidebar soft limit per browser session (warning only)
     max_daily_cost_usd: float = 2.0  # hard limit per signed-in user per day (pipeline)
     max_daily_cost_total_usd: float = 20.0  # hard limit across all users per day (pipeline)
+    max_daily_cost_guest_usd: float = 3.0  # hard limit across all guests together per day
 
     app_title: str = "Hoot - AI Interview Prep"
     user_name: str = ""

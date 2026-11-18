@@ -123,6 +123,12 @@ would truncate the JSON (see `CallOverrides` in `guard/pipeline.py`).
    (`ALLOWED_EMAILS="*"`), so the reviewer or a CV reader just signs in. The identity is what
    makes the per-user cap, private histories and the audit trail work; a comma-separated list
    turns the same gate into a private allowlist.
+7. **Guest demo without giving up identity**: with `GUEST_MODE_ENABLED`, the sign-in card also
+   offers **Try as guest**. Each guest gets a random `guest-…` id for that browser tab, so
+   guests never see each other's sessions or resumes; all guests together share one daily cap
+   (`MAX_DAILY_COST_GUEST_USD`, default $3), because a refresh means a new id and would
+   otherwise reset the per-user cap; and guest data is deleted after 24 hours. The guard, the
+   audit trail and the global cap apply exactly as for signed-in users.
 
 Every decision is recorded in the sidebar **Security log** for the current browser session and
 in the `security_events` table as a permanent audit trail. Try the **Guard playground** on
@@ -313,7 +319,9 @@ or a comma-separated list; an empty value admits nobody.
    variables, which is how `config.Settings` reads them.
 3. Deploy, then open the URL: you should see the sign-in card, Google, then the dashboard with
    your email in the sidebar. `APP_ENV=prod` has forced the LLM guard to fail closed and the
-   daily spend cap (`MAX_DAILY_COST_USD`) is enforced per signed-in user.
+   daily spend cap (`MAX_DAILY_COST_USD`) is enforced per signed-in user. With
+   `GUEST_MODE_ENABLED = true` the card also shows **Try as guest**, which opens the full app
+   without an account.
 
 What to expect: the app sleeps after a while without visitors and wakes on the next visit;
 Neon suspends its compute when idle and resumes on the first query (a second or two).

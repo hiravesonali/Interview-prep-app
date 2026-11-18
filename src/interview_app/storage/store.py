@@ -7,9 +7,9 @@ an in-memory engine (`make_engine("sqlite://")`). Nothing else in the app touche
 from __future__ import annotations
 
 from dataclasses import asdict
-from datetime import datetime, time
+from datetime import datetime, time, timedelta
 
-from sqlalchemy import Engine, func, select
+from sqlalchemy import Engine, delete, func, select
 from sqlalchemy.orm import Session
 
 from interview_app.config import Settings
@@ -31,6 +31,11 @@ from interview_app.storage.history import ResumeSummary, SessionSummary, Tailore
 from interview_app.storage.prompt_lab import LabRecord
 
 LOCAL_USER = "local"  # user id when the app runs without sign-in
+GUEST_PREFIX = "guest-"  # guest user ids are GUEST_PREFIX + a random hex id (see ui/auth.py)
+
+
+def is_guest_id(user_id: str) -> bool:
+    return user_id.startswith(GUEST_PREFIX)
 
 
 class Store:
@@ -250,6 +255,36 @@ class Store:
     def cost_today_all_users(self) -> float:
         """USD spent by everyone since local midnight: the global cap for a public deployment."""
         return self._cost_since_midnight()
+
+    def cost_today_guests(self) -> float:
+        """USD spent by all guests together since local midnight. A guest gets a new id on every
+        refresh, so the per-user cap alone does not bound guests; this shared cap does."""
+        return self._cost_since_midnight(UsageEventRow.user_id.startswith(GUEST_PREFIX))
+
+    # ----- guest data retention -----
+
+    def purge_guest_data(self, older_than: timedelta) -> int:
+        """Delete guests' sessions, Prompt Lab runs and resumes older than `older_than`.
+
+        Usage and security events stay: they are the spend ledger the daily caps read and the
+        audit trail of attacks. Runs for every user (not only `self.user_id`). Returns rows
+        deleted.
+        """
+        cutoff = datetime.now() - older_than
+        targets = (
+            (SessionRow, SessionRow.started_at),
+            (LabRunRow, LabRunRow.created_at),
+            (ResumeRow, ResumeRow.created_at),
+            (TailoredResumeRow, TailoredResumeRow.created_at),
+        )
+        deleted = 0
+        with Session(self.engine) as db, db.begin():
+            for table, created in targets:
+                result = db.execute(
+                    delete(table).where(table.user_id.startswith(GUEST_PREFIX), created < cutoff)
+                )
+                deleted += result.rowcount or 0
+        return deleted
 
     def _cost_since_midnight(self, *conditions) -> float:
         start = datetime.combine(datetime.now().date(), time.min)
